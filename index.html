@@ -1,0 +1,2124 @@
+<title>Câu Cá Pixel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=VT323&display=swap">
+<style>
+/* Bố cục: thanh tab trên cùng, khung chơi 16:9 ở giữa, bảng điều khiển bên dưới. Tông màu: gỗ ván cầu và nước ao. */
+:root {
+  --bg: #e7eee6; --panel: #fbf8ee; --panel2: #efe9d6; --ink: #1b2a33; --muted: #5a6b72; --line: #c8cdb6;
+  --accent: #d3522a; --accent-ink: #ffffff; --teal: #137a8a; --good: #2a8a52; --bad: #c63c34; --gold: #a9780f;
+  --shadow: rgba(27, 42, 51, .18); --stage-edge: #1b2a33; --track: #d9dcc8;
+  --font-display: 'VT323', ui-monospace, 'Courier New', monospace;
+  --font-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1620; --panel: #14212d; --panel2: #1a2b3a; --ink: #e3edf0; --muted: #94a6ad; --line: #2a3d4d;
+    --accent: #ff7f50; --accent-ink: #1b1209; --teal: #4cc3d4; --good: #4cc27d; --bad: #ff6b61; --gold: #e3b341;
+    --shadow: rgba(0, 0, 0, .45); --stage-edge: #02070c; --track: #22364a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1620; --panel: #14212d; --panel2: #1a2b3a; --ink: #e3edf0; --muted: #94a6ad; --line: #2a3d4d;
+  --accent: #ff7f50; --accent-ink: #1b1209; --teal: #4cc3d4; --good: #4cc27d; --bad: #ff6b61; --gold: #e3b341;
+  --shadow: rgba(0, 0, 0, .45); --stage-edge: #02070c; --track: #22364a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .drop:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; }
+h2 { font-size: 28px; } h3 { font-size: 22px; }
+p { margin: 0; }
+.app { max-width: 1040px; margin: 0 auto; padding-block: 12px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.logo { font-family: var(--font-display); font-size: 38px; line-height: 1; letter-spacing: .03em; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-family: var(--font-display); font-size: 22px; line-height: 1; padding: 6px 10px; background: var(--panel); border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--shadow); }
+.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 12px 0 14px; padding-bottom: 4px; scrollbar-width: thin; }
+.tab { flex: none; font-family: var(--font-display); font-size: 22px; line-height: 1; padding: 8px 14px; background: var(--panel2); border: 2px solid var(--line); color: var(--muted); }
+.tab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.view { display: none; }
+.view.on { display: block; }
+.stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #1c4546; border: 3px solid var(--stage-edge); box-shadow: 0 5px 0 var(--shadow); user-select: none; -webkit-user-select: none; touch-action: manipulation; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.hud-top { position: absolute; left: 8px; top: 8px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+.hud-top span { font-family: var(--font-display); font-size: 20px; line-height: 1; padding: 4px 8px; background: rgba(8, 16, 24, .72); color: #f1f6f4; }
+.meter { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(70%, 420px); height: 22px; background: rgba(8, 16, 24, .8); border: 2px solid #f1f6f4; pointer-events: none; }
+.meter-fill { height: 100%; width: 0; background: linear-gradient(90deg, #3fd18a, #ffd23f 60%, #ff5a4a); }
+.meter-max { position: absolute; top: -4px; bottom: -4px; width: 3px; background: #fff; }
+.meter-lbl { position: absolute; left: 0; right: 0; top: -22px; text-align: center; font-family: var(--font-display); font-size: 18px; color: #f1f6f4; text-shadow: 0 1px 0 #000; }
+.fhud { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: min(78%, 520px); pointer-events: none; }
+.fname { font-family: var(--font-display); font-size: 20px; color: #f1f6f4; text-shadow: 0 1px 0 #000; text-align: center; line-height: 1; margin-bottom: 4px; }
+.tbar { position: relative; height: 20px; background: rgba(8, 16, 24, .82); border: 2px solid #f1f6f4; }
+.tbar .z { position: absolute; top: 0; bottom: 0; }
+.z.slack { left: 0; width: 15%; background: repeating-linear-gradient(45deg, #5a7a9a 0 4px, #3d556e 4px 8px); }
+.z.sweet { left: 32%; width: 40%; background: #2a8a52; }
+.z.danger { left: 90%; width: 10%; background: repeating-linear-gradient(45deg, #e04a3a 0 4px, #8f2a22 4px 8px); }
+.tmark { position: absolute; top: -4px; bottom: -4px; width: 5px; margin-left: -2px; background: #fff; box-shadow: 0 0 0 1px #000; }
+.pbar { height: 8px; margin-top: 4px; background: rgba(8, 16, 24, .82); border: 2px solid #f1f6f4; }
+.pfill { height: 100%; width: 0; background: #ffd23f; }
+.toast { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); max-width: 86%; text-align: center; font-family: var(--font-display); font-size: 24px; line-height: 1.1; padding: 6px 12px; background: rgba(8, 16, 24, .86); color: #f1f6f4; border: 2px solid #f1f6f4; pointer-events: none; }
+.toast.good { border-color: #6be39a; color: #c9ffe0; } .toast.bad { border-color: #ff8a7a; color: #ffd6d0; }
+.hintline { margin: 10px 2px 0; min-height: 22px; color: var(--muted); font-size: 14px; }
+.controls { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 12px; margin-top: 10px; align-items: stretch; }
+.act { font-family: var(--font-display); font-size: 28px; line-height: 1; padding: 16px 10px; background: var(--accent); color: var(--accent-ink); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.act:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+.act[disabled] { opacity: .55; }
+.act.hot { background: #e03a2a; color: #fff; }
+.side { display: grid; gap: 10px; min-width: 0; }
+.skills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.sk { position: relative; overflow: hidden; text-align: left; padding: 6px 8px; background: var(--panel); border: 2px solid var(--ink); min-width: 0; }
+.sk b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 19px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk small { display: block; color: var(--muted); font-size: 11px; }
+.sk .cd { position: absolute; left: 0; bottom: 0; height: 100%; width: 0; background: var(--shadow); pointer-events: none; }
+.sk.lock { opacity: .55; } .sk.live { border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal); }
+.gear { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+.gear label { display: flex; gap: 6px; align-items: center; }
+.gear select { padding: 5px 8px; background: var(--panel); border: 2px solid var(--ink); }
+.panel { background: var(--panel); border: 2px solid var(--ink); box-shadow: 0 4px 0 var(--shadow); padding: 14px; }
+.panel + .panel, .stack > * + * { margin-top: 14px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.card { background: var(--panel); border: 2px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card.on { border-color: var(--teal); }
+.card.lockd { opacity: .6; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.sp { justify-content: space-between; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+.btn { font-family: var(--font-display); font-size: 20px; line-height: 1; padding: 8px 12px; background: var(--panel2); border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.btn.pri { background: var(--accent); color: var(--accent-ink); }
+.btn.ok { background: var(--good); color: #fff; }
+.btn.ghost { box-shadow: none; background: transparent; }
+.btn[disabled] { opacity: .45; box-shadow: none; cursor: not-allowed; }
+.stat { display: grid; grid-template-columns: 76px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.bar { height: 8px; background: var(--track); border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; background: var(--teal); }
+.bar.xp i { background: var(--gold); }
+.tag { display: inline-block; font-family: var(--font-display); font-size: 17px; line-height: 1; padding: 3px 6px; border: 2px solid currentColor; }
+.th { image-rendering: pixelated; image-rendering: crisp-edges; height: 48px; width: auto; max-width: 96px; object-fit: contain; flex: none; background: #2c6e78; border: 2px solid var(--ink); padding: 3px; }
+.th.silh { filter: brightness(0); opacity: .4; }
+.list { display: grid; gap: 8px; }
+.item { display: flex; gap: 10px; align-items: center; padding: 8px; background: var(--panel); border: 2px solid var(--line); min-width: 0; }
+.item .grow { flex: 1; min-width: 0; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(5, 12, 18, .72); padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+.mbox { width: min(100%, 440px); max-height: 100%; overflow-y: auto; background: var(--panel); border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--shadow); padding: 18px; display: grid; gap: 10px; }
+.mbox h2 { font-size: 32px; line-height: 1; }
+.mbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; }
+.cwrap { display: flex; justify-content: center; padding: 14px; background: #2c6e78; border: 2px solid var(--ink); }
+.cwrap canvas { image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; height: auto; }
+.badge { font-family: var(--font-display); font-size: 18px; line-height: 1; padding: 3px 7px; color: #fff; background: var(--rc, #888); }
+.badge.new { background: var(--accent); }
+.gain { margin: 0; padding-left: 18px; font-size: 14px; }
+.story { font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border: 2px solid var(--line); background: var(--panel2); }
+
+/* Admin */
+.adm { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.flist { display: grid; gap: 6px; max-height: 70vh; overflow-y: auto; padding-right: 2px; }
+.frow { display: flex; gap: 8px; align-items: center; text-align: left; padding: 6px; background: var(--panel); border: 2px solid var(--line); width: 100%; min-width: 0; }
+.frow.on { border-color: var(--teal); background: var(--panel2); }
+.frow .nm { flex: 1; min-width: 0; line-height: 1.25; }
+.frow .nm b { display: block; font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frow .th { height: 32px; max-width: 56px; padding: 2px; }
+.drop { display: grid; place-items: center; gap: 4px; text-align: center; padding: 22px 12px; border: 3px dashed var(--line); background: var(--panel2); cursor: pointer; }
+.drop.over { border-color: var(--teal); background: var(--panel); }
+.drop b { font-family: var(--font-display); font-weight: 400; font-size: 24px; }
+.form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.form label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+.form input[type=text], .form input[type=number], .form select, .form textarea { width: 100%; padding: 6px 8px; background: var(--panel); border: 2px solid var(--line); color: var(--ink); min-width: 0; }
+.form .wide { grid-column: 1 / -1; }
+.checks { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink); }
+.checks label { display: flex; flex-direction: row; gap: 4px; align-items: center; color: var(--ink); font-size: 13px; }
+.sliders { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.sliders label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.sliders label span { display: flex; justify-content: space-between; color: var(--ink); }
+.sliders input[type=range] { width: 100%; accent-color: var(--teal); }
+.prev { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.pv { display: grid; gap: 4px; min-width: 0; }
+.pv small { color: var(--muted); font-size: 12px; }
+.pv .cvw { display: grid; place-items: center; min-height: 120px; padding: 6px; border: 2px solid var(--ink); background-color: #cfd6cc; background-image: linear-gradient(45deg, #b9c2b8 25%, transparent 25%, transparent 75%, #b9c2b8 75%), linear-gradient(45deg, #b9c2b8 25%, transparent 25%, transparent 75%, #b9c2b8 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; overflow: hidden; }
+.pv canvas { max-width: 100%; height: auto; }
+.pv canvas.crisp { image-rendering: pixelated; image-rendering: crisp-edges; }
+.pv canvas.pick { cursor: crosshair; } .pv canvas.brush { cursor: cell; }
+.swatch { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--ink); vertical-align: -3px; }
+.note { padding: 8px 10px; background: var(--panel2); border-left: 4px solid var(--teal); font-size: 13px; }
+.note.warn { border-left-color: var(--gold); }
+.exp { width: 100%; min-height: 110px; font-family: ui-monospace, monospace; font-size: 11px; padding: 6px; background: var(--panel2); border: 2px solid var(--line); color: var(--ink); }
+@media (max-width: 760px) {
+  .adm { grid-template-columns: minmax(0, 1fr); } .flist { max-height: 260px; }
+  .controls { grid-template-columns: minmax(0, 1fr); }
+  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .logo { font-size: 32px; } .toast { font-size: 20px; } .act { font-size: 26px; padding: 14px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <h1 class="logo">Câu Cá Pixel</h1>
+    <div class="chips">
+      <span class="chip" id="cMoney">0 xu</span>
+      <span class="chip" id="cLevel">Cấp 1</span>
+      <button class="btn" id="helpBtn" type="button">Cách chơi</button>
+    </div>
+  </header>
+  <nav class="tabs" id="nav" aria-label="Chuyển màn hình">
+    <button class="tab on" type="button" data-view="play">Chơi</button>
+    <button class="tab" type="button" data-view="shop">Cửa hàng</button>
+    <button class="tab" type="button" data-view="bag">Túi và sổ cá</button>
+    <button class="tab" type="button" data-view="skills">Kỹ năng</button>
+    <button class="tab" type="button" data-view="map">Bản đồ</button>
+    <button class="tab" type="button" data-view="admin">Admin</button>
+  </nav>
+  <main>
+    <section class="view on" id="v-play">
+      <div class="stage" id="stage">
+        <canvas id="cv" width="480" height="270" aria-label="Khung chơi câu cá"></canvas>
+        <div class="hud-top"><span id="hLake"></span><span id="hTime"></span></div>
+        <div class="meter" id="meter" hidden><div class="meter-lbl">Lực quăng</div><div class="meter-fill" id="meterFill"></div><div class="meter-max" id="meterMax"></div></div>
+        <div class="fhud" id="fhud" hidden>
+          <div class="fname" id="fName">???</div>
+          <div class="tbar"><div class="z slack"></div><div class="z sweet"></div><div class="z danger"></div><div class="tmark" id="tMark"></div></div>
+          <div class="pbar"><div class="pfill" id="pFill"></div></div>
+        </div>
+        <div class="toast" id="toast" hidden></div>
+      </div>
+      <p class="hintline" id="hint"></p>
+      <div class="controls">
+        <button class="act" id="act" type="button">QUĂNG CẦN</button>
+        <div class="side">
+          <div class="skills" id="skillBar"></div>
+          <div class="gear">
+            <span>Cần: <b id="gRod"></b></span>
+            <label>Mồi <select id="baitSel" aria-label="Chọn mồi"></select></label>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="view" id="v-shop"></section>
+    <section class="view" id="v-bag"></section>
+    <section class="view" id="v-skills"></section>
+    <section class="view" id="v-map"></section>
+    <section class="view" id="v-admin"></section>
+  </main>
+</div>
+<div class="modal" id="modal" hidden><div class="mbox" id="mbox"></div></div>
+
+<script>
+(function(){
+"use strict";
+/* ===== DỮ LIỆU GAME: chỉnh số ở đây để cân bằng ===== */
+const CFG = {
+  startMoney: 30,
+  clockSpeed: 4,          // phút trong game mỗi giây thật
+  hookBase: 0.65,         // giây được phép dựng cần
+  reelStrain: 0.40,       // lực căng thêm khi giữ cuộn
+  releaseFactor: 0.55,    // nhả cần thì chỉ chịu 55% lực cá
+  snapAt: 0.9,            // căng quá mức này => bắt đầu đứt
+  snapTime: 0.42,
+  slackAt: 0.15,          // chùng dưới mức này => bắt đầu thoát
+  slackTime: 1.6,
+  sweetLo: 0.32, sweetHi: 0.72
+};
+
+const RARITY = [
+  { name: 'Phổ biến', w: 60, col: '#8aa0a8' },
+  { name: 'Ít gặp', w: 26, col: '#3fae5a' },
+  { name: 'Hiếm', w: 10, col: '#3d8bd9' },
+  { name: 'Quý', w: 3.5, col: '#a05cd6' },
+  { name: 'Huyền thoại', w: 0.5, col: '#e0a21b' }
+];
+
+const BAIT_KINDS = { worm: 'Giun', grain: 'Cơm, ngũ cốc', insect: 'Côn trùng', shrimp: 'Tép', fish: 'Cá nhỏ', lure: 'Mồi giả', glow: 'Mồi sáng' };
+
+const BAITS = [
+  { id: 'rice', name: 'Cơm nguội', kind: 'grain', price: 2, attr: 1.0 },
+  { id: 'worm', name: 'Giun đất', kind: 'worm', price: 3, attr: 1.1 },
+  { id: 'cricket', name: 'Dế', kind: 'insect', price: 6, attr: 1.25 },
+  { id: 'shrimp', name: 'Tép', kind: 'shrimp', price: 10, attr: 1.35 },
+  { id: 'minnow', name: 'Cá nhỏ', kind: 'fish', price: 25, attr: 1.5 },
+  { id: 'lure', name: 'Mồi giả', kind: 'lure', price: 60, attr: 1.7 },
+  { id: 'glow', name: 'Mồi phát sáng', kind: 'glow', price: 120, attr: 2.0 }
+];
+
+const RODS = [
+  { id: 'bamboo', name: 'Cần tre của ông', price: 0, power: 1.0, reel: 1.0, range: 0.55, hook: 0, luck: 0, note: 'Cũ, nhẹ, nhưng là của ông.' },
+  { id: 'cane', name: 'Cần trúc', price: 150, power: 1.5, reel: 1.1, range: 0.65, hook: 0.05, luck: 0.03, note: 'Dẻo hơn, vung xa hơn chút.' },
+  { id: 'glass', name: 'Cần sợi thuỷ tinh', price: 700, power: 2.4, reel: 1.25, range: 0.8, hook: 0.08, luck: 0.06, note: 'Chịu được cá sông.' },
+  { id: 'carbon', name: 'Cần carbon', price: 3500, power: 3.8, reel: 1.45, range: 0.9, hook: 0.1, luck: 0.1, note: 'Nhẹ và cứng, dành cho hồ lớn.' },
+  { id: 'pro', name: 'Cần carbon Pro', price: 14000, power: 5.5, reel: 1.7, range: 1.0, hook: 0.14, luck: 0.15, note: 'Quăng ra tận ngoài khơi.' },
+  { id: 'legend', name: 'Cần của thuỷ thần', price: 60000, power: 8.0, reel: 2.0, range: 1.0, hook: 0.2, luck: 0.25, note: 'Chỉ dùng cho con cá cuối cùng.' }
+];
+
+const LAKES = [
+  { id: 'ao', name: 'Ao Làng', lvl: 1, cost: 0, need: null, recRod: 0,
+    sky: ['#8fd0ec', '#e4f5f2'], water: ['#4d9b84', '#2e6e66', '#1c4546'], floor: '#4f4030', desc: 'Ao đầu làng, bèo và sen, cá nhỏ.' },
+  { id: 'song', name: 'Sông Quê', lvl: 4, cost: 400, need: { lake: 'ao', n: 5 }, recRod: 1,
+    sky: ['#9fd8ea', '#f2ead2'], water: ['#a28a5c', '#7d6a45', '#4f4330'], floor: '#4a3b2a', desc: 'Nước phù sa, dừa nước hai bờ, cá to hơn ao nhiều.' },
+  { id: 'ho', name: 'Hồ Lớn', lvl: 8, cost: 2500, need: { lake: 'song', n: 6 }, recRod: 2,
+    sky: ['#7fb4e8', '#dff0fb'], water: ['#3d95c8', '#236a9c', '#12406a'], floor: '#43506a', desc: 'Nước trong, núi bao quanh, cá lớn và khôn.' },
+  { id: 'bien', name: 'Biển Xa', lvl: 13, cost: 9000, need: { lake: 'ho', n: 5 }, recRod: 3,
+    sky: ['#6cc0f0', '#fbe9c6'], water: ['#2fc0c8', '#1b8cb0', '#0f5880'], floor: '#c8b48a', desc: 'Ngoài khơi, ngọn hải đăng, cá dữ.' },
+  { id: 'hang', name: 'Hang Ngầm', lvl: 18, cost: 30000, need: { lake: 'bien', n: 5 }, recRod: 4,
+    sky: ['#0b1020', '#141b34'], water: ['#0f3a56', '#0b2640', '#071526'], floor: '#241f33', desc: 'Hồ ngầm dưới núi, tối và lạ.' }
+];
+
+const TIMES = ['sáng', 'trưa', 'chiều', 'tối'];
+const WEATHERS = ['nắng', 'âm u', 'mưa', 'sương'];
+const PATTERNS = {
+  steady: { name: 'Kéo đều', base: 0.20, wave: 0.05, wf: 2.0, every: [99, 99], dash: 0, dur: [1, 1], hint: 'Giữ nhịp, đừng cuộn quá tay.' },
+  dash: { name: 'Lao một phát', base: 0.14, wave: 0.04, wf: 2.0, every: [3.2, 5.5], dash: 0.45, dur: [0.7, 1.0], hint: 'Thấy dấu ! thì nhả cần.' },
+  shake: { name: 'Lắc liên hồi', base: 0.20, wave: 0.13, wf: 9.0, every: [8, 12], dash: 0.25, dur: [0.6, 0.9], hint: 'Căng dây dao động nhanh.' },
+  dive: { name: 'Chúi xuống đáy', base: 0.26, wave: 0.05, wf: 1.6, every: [4, 6], dash: 0.30, dur: [1.3, 1.8], hint: 'Cú chúi kéo dài, nhả lâu.' },
+  erratic: { name: 'Khó đoán', base: 0.18, wave: 0.08, wf: 4.0, every: [2.0, 4.5], dash: 0.38, dur: [0.45, 0.8], hint: 'Lao bất chợt, nhịp thất thường.' },
+  legend: { name: 'Huyền thoại', base: 0.24, wave: 0.07, wf: 3.0, every: [2.4, 4.0], dash: 0.5, dur: [0.7, 1.1], hint: 'Mọi kiểu giật trộn lại.' }
+};
+
+const ACTIVE_SKILLS = [
+  { id: 'calm', name: 'Nước lặng', lvl: 2, cd: 18, dur: 4, desc: 'Cá bớt giật mạnh trong 4 giây.', icon: '~' },
+  { id: 'power', name: 'Kéo mạnh', lvl: 3, cd: 14, dur: 2.5, desc: 'Cuộn cần nhanh gấp đôi trong 2,5 giây.', icon: '>>' },
+  { id: 'scent', name: 'Mồi thơm', lvl: 4, cd: 30, dur: 0, desc: 'Lần quăng này cá cắn nhanh gấp đôi và dễ ra cá hiếm.', icon: '*' },
+  { id: 'sonar', name: 'Sonar', lvl: 6, cd: 25, dur: 8, desc: 'Hiện cá và tên loài dưới nước trong 8 giây.', icon: ')))' }
+];
+
+const PASSIVES = [
+  { id: 'line', name: 'Dây bền', max: 5, per: 'Giảm 8% lực kéo của cá mỗi cấp' },
+  { id: 'hands', name: 'Tay nhanh', max: 5, per: 'Thêm 0,09 giây để dựng cần mỗi cấp' },
+  { id: 'haggle', name: 'Mặc cả', max: 5, per: 'Giá bán cá tăng 6% mỗi cấp' },
+  { id: 'eye', name: 'Mắt cá', max: 5, per: 'Cá hiếm dễ cắn hơn 8% mỗi cấp' },
+  { id: 'arms', name: 'Tay khoẻ', max: 5, per: 'Cuộn nhanh hơn 7% mỗi cấp' },
+  { id: 'frugal', name: 'Tiết kiệm mồi', max: 5, per: '8% không mất mồi mỗi cấp' }
+];
+
+const STORY = {
+  intro: 'Ông nội mất, để lại một chiếc cần tre cũ và cuốn sổ tay. Trang cuối chỉ có một dòng: "Nơi nước chảy ngược về nguồn có con chép vàng to bằng chiếc thuyền. Câu được nó, con sẽ hiểu vì sao ông không bao giờ bán cái cần này." Bạn bắt đầu từ cái ao đầu làng.',
+  ao: 'Ông viết: "Chép vàng từng bơi ở ao này khi ông còn nhỏ. Ao hẹp quá, nó đã theo mương ra sông."',
+  song: 'Dân chài sông kể họ thấy vảy vàng lấp lánh ngược dòng về phía hồ lớn, vào những đêm nước lên.',
+  ho: 'Giữa hồ có tảng đá khắc hình con chép. Dưới tảng đá, nước kéo mạnh về phía biển.',
+  bien: 'Con cá không ở biển, nó chỉ đi ngang. Có vảy vàng dính trên mỏm đá, dẫn vào một cửa hang dưới vực.',
+  hang: 'Nước trong hang lặng như gương. Ở đâu đó trong bóng tối, có thứ gì rất lớn đang xoay mình. Mồi giả hoặc mồi sáng, và một chiếc cần thật tốt, là thứ ông luôn dặn.',
+  end: 'Bạn nâng con chép vàng lên khỏi mặt nước, nhìn nó một lúc rồi thả về. Gió ngoài cửa hang thổi vào cuốn sổ của ông, tự lật đến một trang trắng. Bạn cầm bút viết tiếp.'
+};
+
+/* id, tên, hồ, độ hiếm, kg min, kg max, giá ở cân trung bình, sức kéo, kiểu giật, vùng nước, mồi thích, điều kiện, màu mẫu, bề rộng sprite mẫu, mô tả */
+function F(id, name, lake, rar, wmin, wmax, price, pow, pat, zone, likes, when, col, len, desc) {
+  return { id, name, lake, rar, wmin, wmax, price, pow, pat, zone, likes, when: when || null, col, len, desc };
+}
+const FISH_DEFAULT = [
+  F('ro-dong', 'Cá rô đồng', 'ao', 0, .05, .25, 8, .5, 'steady', 's', ['worm', 'grain'], null, '#8a7a3c', 40, 'Sống đầy ngoài ruộng và ao làng. Nhỏ nhưng khỏe, nắm không chặt là tuột.'),
+  F('diec', 'Cá diếc', 'ao', 0, .1, .4, 10, .6, 'steady', 's', ['grain', 'worm'], null, '#b8a56a', 44, 'Thân dẹt màu bạc, hiền lành, hay rỉa mồi từ từ.'),
+  F('tre', 'Cá trê', 'ao', 0, .2, .9, 14, .8, 'shake', 'm', ['worm', 'insect'], { t: ['chiều', 'tối'] }, '#4c4a40', 60, 'Râu dài, da trơn, thích nằm bùn. Giật rất cứng tay.'),
+  F('ro-phi', 'Cá rô phi', 'ao', 1, .2, .8, 18, .8, 'steady', 'm', ['grain', 'shrimp'], null, '#8e9088', 56, 'Ăn tạp, lớn nhanh, đàn nào cũng đông.'),
+  F('thoi-loi', 'Cá thòi lòi', 'ao', 1, .02, .1, 22, .5, 'erratic', 's', ['insect', 'worm'], { w: ['mưa', 'âm u'] }, '#6e7b52', 36, 'Mắt lồi, nhảy trên bùn. Hay lộ diện lúc trời ẩm.'),
+  F('loc', 'Cá lóc', 'ao', 2, .5, 2.5, 60, 1.1, 'dash', 'm', ['fish', 'insect'], { t: ['sáng', 'chiều'] }, '#3c4a2e', 74, 'Thợ săn của ao. Lao một phát rồi thôi, đúng lúc đó phải nhả dây.'),
+  F('chep', 'Cá chép', 'ao', 2, .5, 3, 50, 1.0, 'dash', 'm', ['grain', 'worm'], null, '#b8873a', 72, 'Cá đưa ông Táo về trời. Vảy to, vây cam, khôn nhất ao.'),
+
+  F('linh', 'Cá linh', 'song', 0, .02, .1, 12, .6, 'steady', 's', ['grain', 'worm'], { w: ['mưa'] }, '#aab4b6', 40, 'Mùa nước nổi, từng đàn bạc lấp lánh.'),
+  F('tra', 'Cá tra', 'song', 0, 1, 8, 45, 1.3, 'steady', 'd', ['grain', 'fish'], null, '#8d8f86', 80, 'Nằm sâu, nặng và lì, kéo bền hơi.'),
+  F('basa', 'Cá basa', 'song', 0, 1, 6, 40, 1.3, 'steady', 'd', ['grain', 'shrimp'], { t: ['sáng', 'trưa'] }, '#a3a39a', 78, 'Họ hàng cá tra, bụng trắng mềm.'),
+  F('lang', 'Cá lăng', 'song', 1, .8, 6, 70, 1.6, 'dash', 'd', ['fish', 'shrimp'], { t: ['tối', 'chiều'] }, '#8a7656', 84, 'Da trơn, râu dài, săn mồi về đêm.'),
+  F('bong-tuong', 'Cá bống tượng', 'song', 2, .5, 3, 120, 1.5, 'dive', 'm', ['shrimp', 'worm'], { t: ['tối'] }, '#6b5a3a', 66, 'Đầu to, thích nấp gốc. Dính câu là chúi thẳng xuống đáy.'),
+  F('chinh', 'Cá chình', 'song', 2, .5, 4, 150, 1.7, 'dive', 'd', ['worm', 'fish'], { t: ['tối'] }, '#4a4f3a', 90, 'Trơn như dầu, quấn dây là hết đường gỡ.'),
+  F('ho', 'Cá hô', 'song', 3, 5, 30, 600, 2.4, 'dive', 'd', ['fish'], { t: ['sáng'] }, '#a99a6e', 104, 'Vua của sông, to bằng bắp đùi, nặng như đá.'),
+
+  F('me-hoa', 'Cá mè hoa', 'ho', 0, 2, 12, 90, 1.8, 'steady', 'm', ['grain'], null, '#7f858a', 86, 'Đầu to, hay ngoi lên mặt nước.'),
+  F('tram-den', 'Cá trắm đen', 'ho', 1, 3, 15, 160, 2.2, 'steady', 'd', ['insect', 'worm'], null, '#3b3f44', 92, 'Răng hầu khỏe, thích ăn ốc.'),
+  F('koi', 'Cá chép koi', 'ho', 1, 1, 6, 120, 2.0, 'dash', 'm', ['grain'], { t: ['sáng', 'trưa'] }, '#d9692f', 80, 'Không ai biết ai thả vào hồ này. Màu rực, kéo rất khôn.'),
+  F('hoi-van', 'Cá hồi vân', 'ho', 2, 1, 6, 220, 2.2, 'erratic', 'm', ['lure', 'insect'], { w: ['âm u', 'mưa'], t: ['sáng'] }, '#9aa6a2', 82, 'Vằn hồng bên sườn, nhảy loạn khi dính câu.'),
+  F('loc-bong', 'Cá lóc bông', 'ho', 2, 2, 10, 200, 2.4, 'dash', 'm', ['fish', 'lure'], null, '#35452f', 96, 'Hoa văn như da báo, lao rất gắt.'),
+  F('tam', 'Cá tầm', 'ho', 3, 8, 40, 900, 3.4, 'dive', 'd', ['fish'], { t: ['tối'] }, '#5a6670', 112, 'Loài cổ xưa, thân phủ vảy xương, chìm sâu giữa hồ.'),
+
+  F('nuc', 'Cá nóc', 'bien', 0, .3, 1.5, 80, 2.4, 'shake', 's', ['shrimp', 'worm'], null, '#c7b98a', 50, 'Phồng bụng khi sợ. Giật lắc liên hồi.'),
+  F('thu', 'Cá thu', 'bien', 1, 1, 8, 180, 3.0, 'dash', 'm', ['lure', 'fish'], { t: ['sáng', 'chiều'] }, '#5d7f93', 88, 'Thân thoi, bơi rất nhanh.'),
+  F('mu', 'Cá mú', 'bien', 2, 2, 20, 380, 3.5, 'dive', 'd', ['shrimp', 'fish'], null, '#9c6b4a', 84, 'Nấp rạn san hô, chúi xuống là cuốn dây vào đá.'),
+  F('ngu', 'Cá ngừ', 'bien', 2, 5, 40, 450, 4.0, 'dash', 'd', ['fish', 'lure'], { t: ['sáng'] }, '#3a5f86', 104, 'Cú lao như tên bắn.'),
+  F('duoi', 'Cá đuối', 'bien', 2, 3, 30, 400, 3.6, 'dive', 'd', ['shrimp'], { w: ['âm u', 'sương'] }, '#8b8f94', 100, 'Bay lượn sát đáy, kéo nặng và đều.'),
+  F('map-con', 'Cá mập con', 'bien', 3, 10, 60, 1500, 5.0, 'erratic', 'd', ['fish'], { t: ['tối', 'chiều'] }, '#6a7480', 112, 'Chưa lớn nhưng đã đủ làm đứt dây.'),
+  F('kiem', 'Cá kiếm', 'bien', 3, 20, 100, 2500, 5.6, 'dash', 'd', ['lure'], { t: ['sáng', 'trưa'] }, '#3d4f6f', 120, 'Mũi nhọn dài, vùng vẫy cả buổi.'),
+
+  F('mu-hang', 'Cá mù hang', 'hang', 1, .1, .5, 300, 4.5, 'erratic', 's', ['glow', 'worm'], null, '#d9c9c2', 48, 'Không mắt, thân nhợt nhạt.'),
+  F('phat-sang', 'Cá phát sáng', 'hang', 2, .2, 1, 600, 5.0, 'shake', 'm', ['glow'], null, '#3de0c8', 60, 'Thân loé xanh lam trong bóng tối.'),
+  F('luon-hang', 'Cá lươn điện', 'hang', 2, 1, 5, 800, 5.4, 'shake', 'd', ['glow', 'fish'], null, '#6a5a8a', 90, 'Chớp điện trong nước đen.'),
+  F('thuy-tinh', 'Cá thuỷ tinh', 'hang', 3, .5, 3, 2500, 6.0, 'erratic', 'm', ['glow'], null, '#a8e0f0', 70, 'Trong suốt, nhìn thấy cả xương.'),
+  F('co-dai', 'Cá cổ đại', 'hang', 3, 5, 30, 3000, 6.5, 'dive', 'd', ['glow', 'fish'], null, '#566b5a', 108, 'Hoá thạch còn sống, vảy dày như giáp.'),
+  F('chep-vang', 'Cá chép vàng thần', 'hang', 4, 30, 120, 20000, 8.5, 'legend', 'd', ['glow', 'lure'], null, '#f1b82a', 128, 'Con cá trong truyền thuyết của ông. To bằng chiếc thuyền, vảy như vàng nấu chảy.')
+];
+
+/* cá chép mẫu: ảnh bạn gửi, đã chạy qua đúng bộ pixel hoá của trang Admin */
+const BAKED = { 'chep': { sprite: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAAAnCAYAAACout71AAAJn0lEQVR4AczZfWzVVx3H8W/LSiCLbJOnxcDciEihw4IjzE02Is6ITBMfiImZc6LJjEb/M7ioS9DpYqbuL3XJojNzMcbAnJkLLlHnEPYgmYGGpzIM24DogM1smAWktPW+Tvdtfr29ZS0ttKSf+z3P53zf53vO73cvzTHB/82ZdlEvjfcyJzQogHY9vSFImsYL2IQGdeTEmabF128obMCi8YI14UABUVUVFmLjBWtCgQIIiKqUAUQ9rz3CjIsmDChAAKqnoIwO7doWzZd+olRvurs9tC+ZC/QxYUClv4BQ5tn9T/ZF0kM//W3Q1OkzY/0tCy8orHEFJSpSgAB08tXjccXiFSFNwGzfczo2PvrvOPrSvqKv3fFkbNp8ID5/c1uBlWOkNdZYa1xApUPrP95bHv2OkggBA5Qfrd8QP75/R9Gx15rjuc5jcejll2Prnovi8MnpceP1C4qufd/74767bh+kHJ8dK2AXFJSFkzsHmGNdV8e2v/wrHnvqTADCKVBmv3NhLGudVTTr0p644vLLY+7UV+PKeZf0l4H0QudWXSLt3599KsjYCdB8VBqO4uO8g7LIFAduWxEFDjDpLAsIAVTvj/KEd1XrDQUqOMZgtU+rrTxg5HhSrkHduaiAykHSnstA9X1yrI7N7eForbpmenGw6ZK2suvgpHNpjbG8bTJT2pZE3QfnE0baahPwqFomDZY15LqUjUTNOnJm3++mREpZVSMZUFt9jfnAnS1x790d8bOHjyguAoiDHC4FlQ8O5jHUxuVdqY7Wef+M3tf3RLyxt9xb1Trpvz29P/RLKUu546TnXXZRJDD54apEVH1jwHb/ICLF8VR926Hy3nlmz1kZIsgds6x252hbDwgc5aDMatkt2QejlnLcaqb8qd/y166YPaM3njs8o9xZnnzuNODUr10zv0CU1ymBFbihpE8vHnw9AONTX8lbfzYEld0mvXtKSf7m1uagJ+b3Nnwcm7AqnVzSHvW5WGXSdhYcUDjJcmxr7YnWunhyfPjt+woMZQQAAURL3zYpOLryAy2xdmVXLJv7SuhnfMdWuqgWfSKQPCltljYeCCwlLGuXP5uafZdqX9MRp6csGNSu+/lTkbCy0mUsdJ15l7O0J4w8S8o3/v7h8jTTDxhOL23eX5zMHfYkU5+a+mJ37Phvd8kefaUpSAYgNvPSnbtOR1y8qE8Katq+fWeIulJXy0+buiikgbVBLNWqyhPUa4Z1E1ikrpH6I6r5za8H1Ua79jTHzkdqC6oVLm7ricfbaonaXx4joS/tOIkW1sUsApQXILX7pERNrd/jL/TEDW1nyruQ4wPApi0t5SiJjm891rccQEQB1bqVemXan7xyUnz7q02lTLSY63s/6Y3VVzWXyBJp+hBw5skoAobUAeZOA5DA8toCFmlTVVmZqPJzRn1UgZPSyWK31o4IQOm8aDFhtYxDIij7WCwg8upEEjkiAH12zYnipLQybRwpklYPgLrrlk4KkaLMHWhMIKxTWp120t7TALFpX/nUnLjxvc8XqdPHpqmX95BhnQjQ6mEVUBqAVT2CjlxKvejKHTaJRbB2I3dJO8AAJe2JwxalPgWAYwEiS/oAwVFavnxJAQgIgfDLX52MEyf3liN19MiW+Nia9gBt+xstsfzirhBFxjKPiAbf3SVPWWej5CnvL98IfnjvA2HjXSlVWP2gdDib7Fh1cIMBkDtiQaIGEHCAUF/tY3wwWIDcMZwEhETNMzu6S8RoAwgLyIltT0Rrc0fccvuSAJO95rpFMX9JBAuSjV33ualhLP1Sba37gzKf1hptNl821u7UT996U7m71PMrL3v5AaAyqlSkXOjSIoolg5ggwZhIOZmcpYQiXS2XBkj0qQNAJABAnGI5D4K0jQJi8qn95cFz5PBMXQfJ9QGeCtcEmz4YT6QqI2nrkOaTL9ss31J5DAeA0gGshZ88FSQPEEkPJZer6BBV4IgkbUUIKNKpzOcRUO7YsLSnc0EBweGXLrsp/vHM3hBlIKlPzZl7PJMBXtZLk/FFt/Xk+NqApaOoZ23Co984Ux4Q1q+PU8AH1vHVbhAohWCxdsJOSs9+tpvpF/IGzl1zedshIFiy2Owg78mUeQ4AnG0cGZBEg2ghMEQUAZfKMdJmedos719bFtQsWDVT/sxtExJkrjHXyZLGDUG5xLyda1DVbUd7SxZ1kDgrbUKTqEybaXkvid6RlEmzgLJ510jnnQQQKRupRBPnzWMj3DseAjY9x/r+R3vKm728tbMk2rx+tCxcHPork2YbglKRAzc6dnYKJM4iDoY+Q8nk9XXZ58DOvpqDx1eUS7kvd26fIOW6qyP4RTSjRrn15Lpd/EBSZ097dB58V/hN7DMP9QSt/WZHOGGDQIkm3/EM2Eg/n9FVihOWwb5wV1c0UmlY+8hoyrfuhFSrKn+OmURa6ZEIIAIJEFFiLm/pW/74pyBlNsPxBGXailXxv8nr4nj3tQN0z6/3BYGTspZBoBTWq/5+Aose3BaFdg7IVvuCl5CUZzhLDyWwaKj6+vIEBJLoN59o90S2maw+Nsd3zwNvRvChY/MUx5fvvH+A+EClsvIxAFSjaKqHpO+qA01B9QPq7+cV9xtlZNpd/VKcyfRQFiyq1tenE1J9uSvB3amczeMlnxGUgPhQlTaNNABUtYHdOfaLvsu7Wp6ADF4tz7TFZ9oTJp+a9bC08bbNnk1gVVVt6ymZeUfO3ePyzcgFySuKNu4pkOoBqRuOGoICaahIGgpQdTLHIKXcwkmaOMQSB9jhqh5auYBrl3C5d2q/Fhgn1+7rjc1wId/8pT+XI2b9pN1I1A/KsXFUQGo0QEZSo7rhlnFAZDl6HHBPkP5ppd0lbyXtQK5X175dqsL9mYCASZXKc/joB6UvSJwheQKITCR/NmmTb/TaGc/xNR4pW137JdeTMnfYUZBe8cF3BFjkiHCYfLX5w+aOqMo4pC3pnzJ2rtd6SNvRagAo5zsHNBmZiLJ8JDbhVPtUxzRuys88oKU4TCs/8qH4+j0bws/CnmLGAhCYbJtjVK12Y6l+UCYRqhwheRrpZPpcfUeEaKr2NSapr5ZnWnm91DmCu+/7bqzevle2/ECXD4hsXyrO80c/KPPkxKz8aJTRBA4Zk4Y7pjvT7/SiJ8fy1SMhDXecsWo3ANRYDWqcmQ9+p/9daySA9E1Vocz6YlNU89nmQtnzAgoYdw47GkccX9H0n3VLovs97f3/0eFoj3bska7rvICyiLFwJCG5O/1MXX2imuNC6ryBGq0TQLvbQJJOjUc08eX/AAAA//8wgmgCAAAABklEQVQDACiuijDnt9y4AAAAAElFTkSuQmCC', mouthY: 0.557 } };
+
+/* ===== XỬ LÝ ẢNH: ảnh cá thật -> cá pixel (chạy hoàn toàn trên trình duyệt) ===== */
+const PIX_DEFAULT = { width: 64, colors: 16, tol: 40, erode: 2, sat: 1.15, con: 1.05, outline: true, dither: 0, head: 'auto', bgMode: 'auto' };
+
+function cdist(r1, g1, b1, r2, g2, b2) {
+  const dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
+  return Math.sqrt((2 * dr * dr + 4 * dg * dg + 3 * db * db) / 9);
+}
+
+function fileToImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Không đọc được ảnh này')); };
+    im.src = url;
+  });
+}
+function dataUrlToImage(u) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Ảnh lỗi')); im.src = u; });
+}
+function imageToWork(im, maxDim) {
+  maxDim = maxDim || 420;
+  const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+  const s = Math.min(1, maxDim / Math.max(iw, ih));
+  const w = Math.max(8, Math.round(iw * s)), h = Math.max(8, Math.round(ih * s));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(im, 0, 0, w, h);
+  return c;
+}
+
+function hasTransparency(d, w, h) {
+  let n = 0; const tot = w * h;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 250) n++;
+  return n > tot * 0.03;
+}
+
+function estimateBg(d, w, h) {
+  const buckets = new Map();
+  const add = (x, y) => {
+    const i = (y * w + x) * 4; if (d[i + 3] < 200) return;
+    const k = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3);
+    let b = buckets.get(k); if (!b) { b = [0, 0, 0, 0]; buckets.set(k, b); }
+    b[0] += d[i]; b[1] += d[i + 1]; b[2] += d[i + 2]; b[3]++;
+  };
+  for (let x = 0; x < w; x++) for (let t = 0; t < 2; t++) { add(x, t); add(x, h - 1 - t); }
+  for (let y = 2; y < h - 2; y++) for (let t = 0; t < 2; t++) { add(t, y); add(w - 1 - t, y); }
+  let best = null;
+  for (const b of buckets.values()) if (!best || b[3] > best[3]) best = b;
+  if (!best) return [255, 255, 255];
+  return [best[0] / best[3], best[1] / best[3], best[2] / best[3]];
+}
+
+/* Loang từ viền vào, mọi điểm giống màu nền (hoặc đổi màu rất êm từ điểm trước) là nền. Trả về 1 = cá. */
+function autoMask(d, w, h, bg, tol) {
+  const n = w * h, isBg = new Uint8Array(n), q = new Int32Array(n);
+  let qh = 0, qt = 0;
+  const dbg = (i) => cdist(d[i * 4], d[i * 4 + 1], d[i * 4 + 2], bg[0], bg[1], bg[2]);
+  const seed = (i) => { if (!isBg[i] && dbg(i) <= tol) { isBg[i] = 1; q[qt++] = i; } };
+  for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1); }
+  const nb = [1, -1, w, -w];
+  while (qh < qt) {
+    const i = q[qh++], x = i % w;
+    for (let k = 0; k < 4; k++) {
+      const j = i + nb[k];
+      if (j < 0 || j >= n || isBg[j]) continue;
+      if (k === 0 && x === w - 1) continue;
+      if (k === 1 && x === 0) continue;
+      const dj = dbg(j);
+      let ok = dj <= tol;
+      if (!ok && dj <= tol * 1.5) {
+        const dp = cdist(d[i * 4], d[i * 4 + 1], d[i * 4 + 2], d[j * 4], d[j * 4 + 1], d[j * 4 + 2]);
+        ok = dp <= tol * 0.14;
+      }
+      if (ok) { isBg[j] = 1; q[qt++] = j; }
+    }
+  }
+  const fg = new Uint8Array(n);
+  for (let i = 0; i < n; i++) fg[i] = isBg[i] ? 0 : 1;
+  return fg;
+}
+function alphaMask(d, w, h) {
+  const fg = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) fg[i] = d[i * 4 + 3] > 127 ? 1 : 0;
+  return fg;
+}
+
+function largestComponent(m, w, h) {
+  const n = w * h, lab = new Int32Array(n), q = new Int32Array(n);
+  let best = 0, bestSize = 0, cur = 0;
+  for (let s = 0; s < n; s++) {
+    if (!m[s] || lab[s]) continue;
+    cur++; let qh = 0, qt = 0; q[qt++] = s; lab[s] = cur;
+    while (qh < qt) {
+      const i = q[qh++], x = i % w, y = (i / w) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const j = yy * w + xx;
+        if (m[j] && !lab[j]) { lab[j] = cur; q[qt++] = j; }
+      }
+    }
+    if (qt > bestSize) { bestSize = qt; best = cur; }
+  }
+  const out = new Uint8Array(n);
+  if (best) for (let i = 0; i < n; i++) out[i] = lab[i] === best ? 1 : 0;
+  return out;
+}
+function erodeMask(m, w, h, r) {
+  let cur = m;
+  for (let k = 0; k < r; k++) {
+    const out = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!cur[i]) continue;
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) continue;
+      if (cur[i - 1] && cur[i + 1] && cur[i - w] && cur[i + w]) out[i] = 1;
+    }
+    cur = out;
+  }
+  return cur;
+}
+function smoothMask(m, w, h) {
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let c = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < w && yy < h && m[yy * w + xx]) c++;
+    }
+    out[y * w + x] = c >= 5 ? 1 : 0;
+  }
+  return out;
+}
+function cleanMask(fg, w, h, erode) {
+  let m = largestComponent(fg, w, h);
+  if (erode > 0) m = erodeMask(m, w, h, erode);
+  m = smoothMask(m, w, h);
+  return largestComponent(m, w, h);
+}
+
+function makeCut(srcData, w, h, mask) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  const out = x.createImageData(w, h), o = out.data, s = srcData.data;
+  for (let i = 0; i < w * h; i++) {
+    o[i * 4] = s[i * 4]; o[i * 4 + 1] = s[i * 4 + 1]; o[i * 4 + 2] = s[i * 4 + 2];
+    o[i * 4 + 3] = mask[i] ? 255 : 0;
+  }
+  x.putImageData(out, 0, 0);
+  return c;
+}
+
+/* Đoán đầu cá nằm bên trái: thân gần đầu dày hơn thân gần đuôi */
+function guessHeadLeft(alpha, w, h, bx0, bx1) {
+  const len = bx1 - bx0 + 1; if (len < 6) return true;
+  const col = new Float32Array(w);
+  for (let y = 0; y < h; y++) for (let x = bx0; x <= bx1; x++) if (alpha[y * w + x] > 127) col[x]++;
+  const avg = (a, b) => {
+    const s = bx0 + Math.floor(len * a), e = bx0 + Math.max(Math.floor(len * b), Math.floor(len * a) + 1);
+    let t = 0, n = 0; for (let x = s; x < e; x++) { t += col[x]; n++; } return n ? t / n : 0;
+  };
+  return avg(0.1, 0.36) >= avg(0.64, 0.9);
+}
+
+function medianCut(px, k) {
+  let boxes = [px];
+  while (boxes.length < k) {
+    let bi = -1, bestScore = 0, bch = 0;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i]; if (b.length < 2) continue;
+      let mn = [255, 255, 255], mx = [0, 0, 0];
+      for (const p of b) for (let c = 0; c < 3; c++) { if (p[c] < mn[c]) mn[c] = p[c]; if (p[c] > mx[c]) mx[c] = p[c]; }
+      const rg = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]];
+      const ch = rg[1] >= rg[0] && rg[1] >= rg[2] ? 1 : rg[0] >= rg[2] ? 0 : 2;
+      const score = rg[ch] * Math.sqrt(b.length);
+      if (score > bestScore) { bestScore = score; bi = i; bch = ch; }
+    }
+    if (bi < 0) break;
+    const b = boxes[bi].slice().sort((a, c) => a[bch] - c[bch]);
+    const mid = b.length >> 1;
+    boxes.splice(bi, 1, b.slice(0, mid), b.slice(mid));
+  }
+  return boxes.map(b => {
+    const s = [0, 0, 0]; for (const p of b) { s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; }
+    return [Math.round(s[0] / b.length), Math.round(s[1] / b.length), Math.round(s[2] / b.length)];
+  });
+}
+
+const BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+
+/* cut: canvas đã tách nền (alpha). Trả về {canvas, mouthY, headWasLeft} hoặc null nếu rỗng */
+function pixelize(cut, o) {
+  o = Object.assign({}, PIX_DEFAULT, o || {});
+  const w = cut.width, h = cut.height;
+  const id = cut.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = id.data;
+  let x0 = w, x1 = -1, y0 = h, y1 = -1;
+  const alpha = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const a = d[(y * w + x) * 4 + 3]; alpha[y * w + x] = a;
+    if (a > 127) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return null;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  const headLeft = o.head === 'auto' ? guessHeadLeft(alpha, w, h, x0, x1) : o.head === 'left';
+  const tw = Math.max(8, Math.round(o.width));
+  const th = Math.max(6, Math.min(160, Math.round(tw * bh / bw)));
+
+  const R = new Float32Array(tw * th), G = new Float32Array(tw * th), B = new Float32Array(tw * th), A = new Float32Array(tw * th);
+  for (let ty = 0; ty < th; ty++) for (let tx = 0; tx < tw; tx++) {
+    let sxa = tx * bw / tw, sxb = (tx + 1) * bw / tw;
+    if (headLeft) { const t = sxa; sxa = bw - sxb; sxb = bw - t; }
+    const sya = ty * bh / th, syb = (ty + 1) * bh / th;
+    let r = 0, g = 0, b = 0, aS = 0, wS = 0;
+    for (let y = Math.floor(sya); y < Math.ceil(syb); y++) {
+      const wy = Math.min(y + 1, syb) - Math.max(y, sya); if (wy <= 0) continue;
+      for (let x = Math.floor(sxa); x < Math.ceil(sxb); x++) {
+        const wx = Math.min(x + 1, sxb) - Math.max(x, sxa); if (wx <= 0) continue;
+        const wgt = wx * wy, i = ((y0 + y) * w + (x0 + x)) * 4, a = d[i + 3] / 255;
+        wS += wgt; if (a <= 0) continue;
+        r += d[i] * a * wgt; g += d[i + 1] * a * wgt; b += d[i + 2] * a * wgt; aS += a * wgt;
+      }
+    }
+    const k = ty * tw + tx;
+    if (aS > 0) { R[k] = r / aS; G[k] = g / aS; B[k] = b / aS; A[k] = aS / wS; }
+  }
+  /* làm đậm màu một chút cho ra chất pixel */
+  const px = [], idx = [];
+  for (let k = 0; k < tw * th; k++) {
+    if (A[k] < 0.45) continue;
+    let r = R[k], g = G[k], b = B[k];
+    const l = 0.3 * r + 0.59 * g + 0.11 * b;
+    r = l + (r - l) * o.sat; g = l + (g - l) * o.sat; b = l + (b - l) * o.sat;
+    r = (r - 128) * o.con + 128; g = (g - 128) * o.con + 128; b = (b - 128) * o.con + 128;
+    R[k] = Math.max(0, Math.min(255, r)); G[k] = Math.max(0, Math.min(255, g)); B[k] = Math.max(0, Math.min(255, b));
+    px.push([R[k], G[k], B[k]]); idx.push(k);
+  }
+  if (!px.length) return null;
+  const pal = medianCut(px, Math.max(2, Math.min(64, Math.round(o.colors))));
+  const near = (r, g, b) => {
+    let bi = 0, bd = 1e9;
+    for (let i = 0; i < pal.length; i++) {
+      const p = pal[i], dr = p[0] - r, dg = p[1] - g, db = p[2] - b, dd = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+      if (dd < bd) { bd = dd; bi = i; }
+    }
+    return pal[bi];
+  };
+  const pad = o.outline ? 1 : 0, cw = tw + pad * 2, ch = th + pad * 2;
+  const out = document.createElement('canvas'); out.width = cw; out.height = ch;
+  const ox = out.getContext('2d', { willReadFrequently: true });
+  const oi = ox.createImageData(cw, ch), od = oi.data;
+  const solid = new Uint8Array(cw * ch);
+  for (const k of idx) {
+    const tx = k % tw, ty = (k / tw) | 0;
+    const t = o.dither ? (BAYER4[ty & 3][tx & 3] / 16 - 0.5) * o.dither * 64 : 0;
+    const c = near(R[k] + t, G[k] + t, B[k] + t);
+    const p = ((ty + pad) * cw + tx + pad) * 4;
+    od[p] = c[0]; od[p + 1] = c[1]; od[p + 2] = c[2]; od[p + 3] = 255;
+    solid[(ty + pad) * cw + tx + pad] = 1;
+  }
+  if (o.outline) {
+    let dk = pal[0], dl = 1e9;
+    for (const p of pal) { const l = p[0] + p[1] + p[2]; if (l < dl) { dl = l; dk = p; } }
+    const oc = [Math.round(dk[0] * 0.45), Math.round(dk[1] * 0.45), Math.round(dk[2] * 0.45)];
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      const i = y * cw + x; if (solid[i]) continue;
+      if ((x > 0 && solid[i - 1]) || (x < cw - 1 && solid[i + 1]) || (y > 0 && solid[i - cw]) || (y < ch - 1 && solid[i + cw])) {
+        od[i * 4] = oc[0]; od[i * 4 + 1] = oc[1]; od[i * 4 + 2] = oc[2]; od[i * 4 + 3] = 255;
+      }
+    }
+  }
+  ox.putImageData(oi, 0, 0);
+  /* miệng cá: đầu cá quay sang phải, lấy trung bình y của các điểm ngoài cùng bên phải */
+  let maxX = -1;
+  for (let x = cw - 1; x >= 0 && maxX < 0; x--) for (let y = 0; y < ch; y++) if (solid[y * cw + x]) { maxX = x; break; }
+  let sy = 0, sn = 0;
+  for (let x = Math.max(0, maxX - 1); x <= maxX; x++) for (let y = 0; y < ch; y++) if (solid[y * cw + x]) { sy += y; sn++; }
+  const mouthY = sn ? (sy / sn + 0.5) / ch : 0.5;
+  return { canvas: out, mouthY, headWasLeft: headLeft, palette: pal };
+}
+
+/* ===== cá mẫu tạm khi chưa có ảnh thật ===== */
+function hexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+function shadeRgb(c, k) { return c.map(v => Math.max(0, Math.min(255, Math.round(v * k)))); }
+function mixRgb(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+function makePlaceholder(f) {
+  const L = Math.max(24, f.len || 60), H = Math.round(L * 0.42) + 6;
+  const c = document.createElement('canvas'); c.width = L + 2; c.height = H + 2;
+  const x = c.getContext('2d');
+  const base = hexToRgb(f.col || '#889aa6'), dark = shadeRgb(base, 0.5), light = mixRgb(base, [255, 255, 255], 0.5), fin = shadeRgb(base, 0.78);
+  const occ = new Uint8Array(L * H), colr = new Array(L * H);
+  const cy = H / 2, ry = H * 0.34, tailEnd = Math.round(L * 0.22);
+  for (let px = 0; px < L; px++) {
+    let half;
+    if (px < tailEnd) { half = 1.5 + (1 - px / tailEnd) * (H * 0.4); }
+    else {
+      const u = Math.min(1, (px - tailEnd) / (L - tailEnd));
+      half = ry * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.78)), 0.7) + 1.5 * (1 - u);
+      if (u > 0.96) half = Math.max(half, 1);
+    }
+    for (let py = Math.round(cy - half); py <= Math.round(cy + half); py++) {
+      if (py < 0 || py >= H) continue;
+      occ[py * L + px] = 1;
+      colr[py * L + px] = px < tailEnd ? fin : (py > cy + half * 0.2 ? light : base);
+    }
+  }
+  for (let px = Math.round(L * 0.38); px < Math.round(L * 0.64); px++) {
+    const t = (px - L * 0.38) / (L * 0.26), hh = Math.round(H * 0.2 * (1 - Math.abs(t * 2 - 1) * 0.6));
+    const top = Math.round(cy - ry * Math.sin(Math.PI * Math.pow((px - tailEnd) / (L - tailEnd), 0.78)) * 0.7);
+    for (let py = top - hh; py <= top; py++) if (py >= 0 && py < H && !occ[py * L + px]) { occ[py * L + px] = 1; colr[py * L + px] = fin; }
+  }
+  const ex = Math.round(L * 0.86), ey = Math.round(cy - ry * 0.18);
+  [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([dx, dy]) => { const i = (ey + dy) * L + ex + dx; if (occ[i]) colr[i] = [250, 250, 250]; });
+  if (occ[(ey + 1) * L + ex + 1]) colr[(ey + 1) * L + ex + 1] = [20, 20, 24];
+  const set = (px, py, rgb) => { x.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; x.fillRect(px + 1, py + 1, 1, 1); };
+  for (let py = 0; py < H; py++) for (let px = 0; px < L; px++) if (occ[py * L + px]) set(px, py, colr[py * L + px]);
+  for (let py = -1; py <= H; py++) for (let px = -1; px <= L; px++) {
+    const at = (a, b) => a >= 0 && b >= 0 && a < L && b < H && occ[b * L + a];
+    if (!at(px, py) && (at(px - 1, py) || at(px + 1, py) || at(px, py - 1) || at(px, py + 1))) set(px, py, dark);
+  }
+  return { canvas: c, mouthY: (cy + 1.5) / (H + 2) };
+}
+
+/* ===== VẼ: cá uốn lượn, phong cảnh, người câu ===== */
+const VW = 480, VH = 270, SURF = 100, DOCKW = 78;
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rgbStr(c) { return 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')'; }
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/* ---------- kho sprite cá ---------- */
+const SPR = {};      // id -> {canvas, mouthY, ph}
+const SIL = {};      // id -> bóng đen
+const URLC = {};     // id -> dataURL cache
+function setSprite(id, canvas, mouthY, ph) { SPR[id] = { canvas, mouthY: mouthY == null ? 0.5 : mouthY, ph: !!ph }; delete SIL[id]; delete URLC[id]; }
+function spriteURL(id) { if (URLC[id]) return URLC[id]; const s = SPR[id]; return s ? (URLC[id] = s.canvas.toDataURL()) : ''; }
+function silhouette(id) {
+  if (SIL[id]) return SIL[id];
+  const s = SPR[id]; if (!s) return null;
+  const c = mkCanvas(s.canvas.width, s.canvas.height), x = c.getContext('2d');
+  x.drawImage(s.canvas, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgb(5,16,26)'; x.fillRect(0, 0, c.width, c.height);
+  return (SIL[id] = c);
+}
+
+/* Cá uốn lượn: cắt sprite thành từng cột 1px, dịch lên xuống theo sóng sin, biên độ tăng dần về phía đuôi.
+   Sprite quay đầu sang phải. flip=true thì cá quay đầu sang trái. */
+function drawFishWavy(ctx, spr, cx, cy, o) {
+  o = o || {};
+  const W = spr.width, H = spr.height, amp = o.amp || 0, ph = o.phase || 0, fq = o.freq || 1.0, tilt = o.tilt || 0;
+  ctx.save();
+  ctx.translate(Math.round(cx), Math.round(cy));
+  if (tilt) ctx.rotate(o.flip ? -tilt : tilt);
+  if (o.flip) ctx.scale(-1, 1);
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  const hx = Math.round(W / 2), hy = Math.round(H / 2), sw = tilt ? 1.7 : 1;
+  for (let i = 0; i < W; i++) {
+    const u = (W - 1 - i) / (W - 1);
+    const env = 0.1 + 0.9 * Math.pow(u, 1.5);
+    const off = Math.round(amp * env * Math.sin(ph - u * fq * Math.PI * 2));
+    ctx.drawImage(spr, i, 0, 1, H, i - hx, -hy + off, sw, H);
+  }
+  ctx.restore();
+}
+/* toạ độ miệng cá trong thế giới */
+function fishMouth(spr, mouthY, cx, cy, o) {
+  const W = spr.width, H = spr.height, amp = o.amp || 0, fq = o.freq || 1.0;
+  const off = Math.round(amp * 0.1 * Math.sin((o.phase || 0)));
+  const dx = (o.flip ? -1 : 1) * (W / 2 - 1);
+  const dy = (mouthY - 0.5) * H + off;
+  const t = o.tilt || 0, s = o.flip ? -1 : 1;
+  const rx = dx * Math.cos(t * s) - dy * Math.sin(t * s), ry = dx * Math.sin(t * s) + dy * Math.cos(t * s);
+  return { x: Math.round(cx + rx), y: Math.round(cy + ry) };
+}
+
+/* ---------- người câu ---------- */
+const FISHER_ROWS = [
+  '....yyyyyy....', '...yyyyyyyy...', '.yyyyyyyyyyyyy', '....ssssss....', '....sssskss...', '....ssssssss..', '.....ssss.....',
+  '....bbbbbb....', '...bbbbbbbbs..', '...bbbbbbbbbss', '...bbbbbb.....', '...bbbbbb.....', '...bbbbbb.....', '...bbbbbb.....',
+  '...pppppp.....', '...pppppp.....', '...pppppp.....', '...ppp.ppp....', '...ppp.ppp....', '...ppp.ppp....', '...ppp.ppp....', '...ppp.ppp....', '..ooo..ooo....', '..ooo..ooo....'
+];
+const FISHER_PAL = { y: '#e9c25a', s: '#f0c8a0', k: '#2a1a14', b: '#3b7fc4', p: '#6b5239', o: '#2b2b33' };
+let FISHER_CV = null;
+function fisherSprite() {
+  if (FISHER_CV) return FISHER_CV;
+  const c = mkCanvas(14, 24), x = c.getContext('2d');
+  FISHER_ROWS.forEach((r, y) => { for (let i = 0; i < 14; i++) { const ch = r[i]; if (ch && ch !== '.') { x.fillStyle = FISHER_PAL[ch]; x.fillRect(i, y, 1, 1); } } });
+  return (FISHER_CV = c);
+}
+const FX0 = 44, FY0 = 76, HAND = { x: 57, y: 85 };
+function drawFisher(ctx, bob) { ctx.drawImage(fisherSprite(), FX0, FY0 + (bob || 0)); }
+function drawRod(ctx, angle, len, bend, hy) {
+  const hx = HAND.x, hyy = (hy == null ? HAND.y : hy);
+  let tip = { x: hx, y: hyy };
+  for (let k = 0; k <= len; k++) {
+    const t = k / len, px = hx + Math.cos(angle) * len * t, py = hyy + Math.sin(angle) * len * t + bend * t * t;
+    ctx.fillStyle = t < 0.3 ? '#5a3c20' : t < 0.75 ? '#8a6238' : '#c9a46a';
+    ctx.fillRect(Math.round(px), Math.round(py), t < 0.3 ? 2 : 1, t < 0.3 ? 2 : 1);
+    tip = { x: Math.round(px), y: Math.round(py) };
+  }
+  return tip;
+}
+function drawLine(ctx, x0, y0, x1, y1, sag, col, alpha) {
+  ctx.save(); ctx.fillStyle = col || '#f1f6f4'; ctx.globalAlpha = alpha == null ? 0.95 : alpha;
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2 + sag, n = Math.max(12, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+  let lx = -999, ly = -999;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+    const px = Math.round(a * x0 + b * mx + c * x1), py = Math.round(a * y0 + b * my + c * y1);
+    if (px !== lx || py !== ly) { ctx.fillRect(px, py, 1, 1); lx = px; ly = py; }
+  }
+  ctx.restore();
+}
+function drawBobber(ctx, x, y) {
+  x = Math.round(x); y = Math.round(y);
+  ctx.fillStyle = '#e04a3a'; ctx.fillRect(x - 1, y - 5, 3, 2);
+  ctx.fillStyle = '#f6f4ee'; ctx.fillRect(x - 1, y - 3, 3, 2);
+  ctx.fillStyle = '#2a2a30'; ctx.fillRect(x, y - 7, 1, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x - 3, y - 1, 7, 1);
+}
+function disc(c, cx, cy, r, col) { c.fillStyle = col; for (let dy = -r; dy <= r; dy++) { const w = Math.floor(Math.sqrt(r * r - dy * dy + 0.5)); c.fillRect(cx - w, cy + dy, 2 * w + 1, 1); } }
+
+/* ---------- bầu trời theo giờ ---------- */
+const SKYKEYS = {
+  night: { top: '#0b1636', bot: '#26386a', dark: 1 },
+  dawn: { top: '#8a9ad0', bot: '#ffc79a', dark: 0.35 },
+  dusk: { top: '#7a5a9a', bot: '#f6a65a', dark: 0.4 }
+};
+function skyAt(hour, lake, weather) {
+  const day = { top: lake.sky[0], bot: lake.sky[1], dark: 0 };
+  const K = [[0, 'night'], [5, 'night'], [6.5, 'dawn'], [8.2, 'day'], [16, 'day'], [18, 'dusk'], [19.6, 'night'], [24, 'night']];
+  let a = K[0], b = K[1];
+  for (let i = 0; i < K.length - 1; i++) if (hour >= K[i][0] && hour <= K[i + 1][0]) { a = K[i]; b = K[i + 1]; break; }
+  const t = (hour - a[0]) / Math.max(0.0001, b[0] - a[0]);
+  const A = a[1] === 'day' ? day : SKYKEYS[a[1]], B = b[1] === 'day' ? day : SKYKEYS[b[1]];
+  let top = mixRgb(hexToRgb(A.top), hexToRgb(B.top), t), bot = mixRgb(hexToRgb(A.bot), hexToRgb(B.bot), t);
+  let dark = lerp(A.dark, B.dark, t);
+  if (weather === 'âm u' || weather === 'mưa') { const g = weather === 'mưa' ? 0.7 : 0.55; top = mixRgb(top, [96, 108, 118], g); bot = mixRgb(bot, [150, 160, 166], g); }
+  if (weather === 'sương') { top = mixRgb(top, [190, 202, 208], 0.55); bot = mixRgb(bot, [214, 224, 228], 0.6); }
+  return { top, bot, dark };
+}
+function drawSky(ctx, sky) {
+  for (let y = 0; y < SURF; y += 4) ctx.fillStyle = rgbStr(mixRgb(sky.top, sky.bot, y / SURF)), ctx.fillRect(0, y, VW, 4);
+}
+const STARS = (() => { const r = mulberry32(7), a = []; for (let i = 0; i < 46; i++) a.push({ x: r() * VW | 0, y: r() * (SURF - 18) | 0, p: r() * 6 }); return a; })();
+function drawCelestial(ctx, hour, dark, weather, t) {
+  if (dark > 0.5 || weather === 'mưa') {
+    ctx.fillStyle = '#fff';
+    const vis = weather === 'mưa' ? 0 : (weather === 'âm u' ? 0.25 : (weather === 'sương' ? 0.3 : 1));
+    STARS.forEach(s => { ctx.globalAlpha = clamp((dark - 0.4) * 1.6, 0, 1) * vis * (0.55 + 0.45 * Math.sin(t * 2 + s.p)); ctx.fillRect(s.x, s.y, 1, 1); });
+    ctx.globalAlpha = 1;
+  }
+  let u = (hour - 6) / 12;
+  if (u >= 0 && u <= 1) {
+    const x = 40 + u * 400, y = SURF - 10 - Math.sin(u * Math.PI) * 74;
+    ctx.globalAlpha = weather === 'nắng' ? 1 : 0.4; disc(ctx, x | 0, y | 0, 8, hour < 8 || hour > 16.5 ? '#ffb86b' : '#ffe27a'); ctx.globalAlpha = 1;
+  } else {
+    u = ((hour + 24 - 18) % 24) / 12;
+    if (u >= 0 && u <= 1) {
+      const x = 40 + u * 400, y = SURF - 10 - Math.sin(u * Math.PI) * 70;
+      ctx.globalAlpha = weather === 'mưa' ? 0.2 : weather === 'nắng' ? 1 : 0.6;
+      disc(ctx, x | 0, y | 0, 7, '#e8eef6'); disc(ctx, (x + 3) | 0, (y - 1) | 0, 6, rgbStr(mixRgb(hexToRgb('#26386a'), [15, 30, 70], 0.5)).replace('rgb', 'rgb'));
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+/* ---------- đáy hồ, phong cảnh tĩnh ---------- */
+function floorY(x) { if (x < DOCKW) return 124; return Math.round(138 + (x - DOCKW) * 0.27 + 4 * Math.sin(x * 0.07)); }
+const SEAWEED = {
+  ao: [{ x: 150, h: 26 }, { x: 205, h: 34 }, { x: 330, h: 30 }, { x: 396, h: 40 }, { x: 440, h: 28 }],
+  song: [{ x: 170, h: 22 }, { x: 300, h: 30 }, { x: 410, h: 26 }],
+  ho: [{ x: 140, h: 30 }, { x: 240, h: 40 }, { x: 350, h: 36 }, { x: 430, h: 44 }],
+  bien: [{ x: 160, h: 18, c: 1 }, { x: 260, h: 22, c: 1 }, { x: 370, h: 20, c: 1 }, { x: 445, h: 24, c: 1 }],
+  hang: []
+};
+function pineTree(c, x, base, h, col, col2) {
+  c.fillStyle = '#4a3322'; c.fillRect(x, base - 3, 2, 3);
+  for (let y = 0; y < h; y++) { const w = Math.floor(y * 0.34) + 1; c.fillStyle = y % 7 < 3 ? col : (col2 || col); c.fillRect(x + 1 - w, base - h + y - 2, 2 * w, 1); }
+}
+function roundTree(c, x, base, r, col, col2) {
+  c.fillStyle = '#4a3322'; c.fillRect(x - 1, base - r, 3, r); disc(c, x, base - r - r * 0.6 | 0, r, col); disc(c, x - (r >> 1), base - r - (r * 0.2) | 0, r * 0.7 | 0, col2 || col);
+}
+function bambooClump(c, x, base, rnd) {
+  for (let k = 0; k < 6; k++) {
+    const bx = x + k * 4 + (rnd() * 3 | 0), h = 34 + (rnd() * 26 | 0), lean = (rnd() - 0.5) * 6;
+    for (let i = 0; i < h; i++) { c.fillStyle = i % 9 === 0 ? '#3f6a30' : '#6aa24a'; c.fillRect(Math.round(bx + lean * i / h), base - i, 2, 1); }
+    for (let l = 0; l < 4; l++) { const ly = base - h + l * 6, dir = l % 2 ? 1 : -1; c.fillStyle = '#4f8a3a'; for (let q = 0; q < 8; q++) c.fillRect(bx + dir * q, ly + (q >> 2), 2, 1); }
+  }
+}
+function palm(c, x, base, h, rnd) {
+  let tx = x;
+  for (let i = 0; i < h; i++) { tx = x + Math.round(Math.sin(i * 0.06) * 3); c.fillStyle = '#5a4a30'; c.fillRect(tx, base - i, 2, 1); }
+  for (let f = 0; f < 7; f++) {
+    const dir = f % 2 ? 1 : -1, len = 14 + (rnd() * 8 | 0), ang = 0.15 + f * 0.12;
+    for (let k = 0; k < len; k++) { c.fillStyle = k > len - 4 ? '#2f6a38' : '#3d8a46'; c.fillRect(Math.round(tx + dir * k), Math.round(base - h - Math.sin(k * 0.22 + ang) * 5 + k * 0.4 * (f / 4)), 1, 2); }
+  }
+}
+function mountain(c, cx, base, w, h, col, snow, rnd) {
+  for (let x = cx - w; x <= cx + w; x++) {
+    const t = 1 - Math.abs(x - cx) / w, y = Math.round(base - h * t - (rnd() * 2));
+    c.fillStyle = col; c.fillRect(x, y, 1, base - y);
+    if (snow && t > 0.74) { c.fillStyle = '#eef3f8'; c.fillRect(x, y, 1, Math.round((t - 0.74) * h * 0.9) + 1); }
+  }
+}
+function lighthouse(c, x, base) {
+  disc(c, x + 4, base + 2, 12, '#5f6670'); c.fillStyle = '#5f6670'; c.fillRect(x - 10, base, 28, 6);
+  for (let y = 0; y < 34; y++) { const w = 9 - Math.floor(y * 0.07); c.fillStyle = Math.floor(y / 6) % 2 ? '#d9433a' : '#f4f1ea'; c.fillRect(x + 4 - (w >> 1), base - y, w, 1); }
+  c.fillStyle = '#ffe27a'; c.fillRect(x + 1, base - 40, 7, 6); c.fillStyle = '#2a2a30'; c.fillRect(x, base - 43, 9, 3); c.fillRect(x + 3, base - 46, 3, 3);
+}
+function caveCeiling(c, rnd) {
+  const g = c.createLinearGradient(0, 0, 0, SURF); g.addColorStop(0, '#080c1a'); g.addColorStop(1, '#1a2140'); c.fillStyle = g; c.fillRect(0, 0, VW, SURF);
+  for (let i = 0; i < 420; i++) { c.fillStyle = rnd() > 0.5 ? '#232c52' : '#10162c'; c.fillRect(rnd() * VW | 0, rnd() * SURF | 0, 2 + (rnd() * 3 | 0), 1 + (rnd() * 2 | 0)); }
+  for (let i = 0; i < 16; i++) {
+    const x = Math.round(i * 31 + rnd() * 22), hh = 12 + (rnd() * 40 | 0);
+    for (let y = 0; y < hh; y++) { const w = Math.max(0, Math.floor((hh - y) * 0.26)); c.fillStyle = y % 5 < 2 ? '#2c3562' : '#1d2447'; c.fillRect(x - w, y, 2 * w + 1, 1); }
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = 270 + i * 34 + (rnd() * 12 | 0), hh = 14 + (rnd() * 18 | 0);
+    for (let y = 0; y < hh; y++) { const w = Math.max(0, Math.floor((hh - y) * 0.2)); c.fillStyle = y < hh * 0.4 ? '#c8f6ff' : '#4fd3f0'; c.fillRect(x - w, SURF - 1 - y, 2 * w + 1, 1); }
+  }
+}
+function buildScene(lake) {
+  const rnd = mulberry32(lake.id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 11));
+  const sc = mkCanvas(VW, VH), c = sc.getContext('2d');   // lớp phong cảnh phía trên mặt nước (trong suốt)
+  const wt = mkCanvas(VW, VH), w = wt.getContext('2d');   // nước, đáy, bờ, ván cầu
+  const id = lake.id;
+  if (id === 'hang') caveCeiling(c, rnd);
+  else {
+    const far = id === 'ho' ? '#6f8fb4' : id === 'bien' ? '#8fb6cf' : '#8db89a';
+    for (let x = 0; x < VW; x++) { const y = Math.round(SURF - 22 - 12 * (0.5 + 0.5 * Math.sin(x * 0.013 + 1)) - 8 * Math.sin(x * 0.04)); c.fillStyle = far; if (id !== 'bien') c.fillRect(x, y, 1, SURF - y); }
+    if (id === 'ao') {
+      for (let x = 70; x < VW; x += 26 + (rnd() * 20 | 0)) roundTree(c, x, SURF - 2, 9 + (rnd() * 8 | 0), '#4f8a5a', '#69a56d');
+      bambooClump(c, 392, SURF - 1, rnd);
+      c.fillStyle = '#6b5232'; c.fillRect(290, SURF - 20, 26, 16); c.fillStyle = '#d6b45a'; for (let i = 0; i < 12; i++) c.fillRect(286 + i, SURF - 28 + i, 34 - i * 2, 1); c.fillStyle = '#2a1e12'; c.fillRect(300, SURF - 14, 5, 10);
+    } else if (id === 'song') {
+      for (let x = 20; x < VW; x += 44 + (rnd() * 26 | 0)) palm(c, x, SURF - 1, 20 + (rnd() * 16 | 0), rnd);
+      c.fillStyle = '#4b3a28'; c.fillRect(300, SURF + 0, 46, 4); c.fillStyle = '#7a5d38'; c.fillRect(304, SURF - 5, 38, 5); c.fillStyle = '#c4553a'; c.fillRect(318, SURF - 11, 12, 6);
+    } else if (id === 'ho') {
+      mountain(c, 90, SURF - 6, 120, 70, '#7a97bb', true, rnd); mountain(c, 250, SURF - 6, 150, 96, '#6a88ad', true, rnd); mountain(c, 420, SURF - 6, 110, 60, '#7d9bbf', true, rnd);
+      for (let x = 82; x < VW; x += 16 + (rnd() * 14 | 0)) pineTree(c, x, SURF - 1, 14 + (rnd() * 14 | 0), '#2f6a4a', '#3d805a');
+    } else if (id === 'bien') {
+      c.fillStyle = '#9fd0e4'; c.fillRect(0, SURF - 3, VW, 3);
+      lighthouse(c, 396, SURF - 6);
+      c.fillStyle = '#6b6f78'; c.fillRect(0, SURF - 30, 54, 30); for (let i = 0; i < 8; i++) c.fillRect(54 + i * 3, SURF - 30 + i * 4, 3, 30 - i * 4);
+    }
+  }
+  /* nước */
+  for (let y = SURF; y < VH; y += 3) {
+    const t = (y - SURF) / (VH - SURF), col = t < 0.35 ? mixRgb(hexToRgb(lake.water[0]), hexToRgb(lake.water[1]), t / 0.35) : mixRgb(hexToRgb(lake.water[1]), hexToRgb(lake.water[2]), (t - 0.35) / 0.65);
+    w.fillStyle = rgbStr(col); w.fillRect(0, y, VW, 3);
+  }
+  /* đáy */
+  const fl = hexToRgb(lake.floor);
+  for (let x = 0; x < VW; x++) {
+    const fy = floorY(x); w.fillStyle = rgbStr(mixRgb(fl, [255, 255, 255], 0.3)); w.fillRect(x, fy, 1, 3);
+    for (let y = fy + 3; y < VH; y += 6) { w.fillStyle = rgbStr(mixRgb(mixRgb(fl, [255, 255, 255], 0.12), [0, 0, 0], clamp((y - fy) / 130, 0, 1) * 0.5)); w.fillRect(x, y, 1, 6); }
+  }
+  for (let i = 0; i < 90; i++) { const x = rnd() * VW | 0, y = floorY(x) + 4 + (rnd() * 30 | 0); if (y < VH) { w.fillStyle = rgbStr(mixRgb(fl, [0, 0, 0], rnd() * 0.3)); w.fillRect(x, y, 2 + (rnd() * 4 | 0), 1 + (rnd() * 2 | 0)); } }
+  for (let i = 0; i < 14; i++) { const x = DOCKW + 14 + (rnd() * (VW - DOCKW - 30) | 0), r = 3 + (rnd() * 5 | 0), y = floorY(x); disc(w, x, y, r, rgbStr(mixRgb(fl, [255, 255, 255], 0.2))); disc(w, x + 1, y + 1, r - 1, rgbStr(mixRgb(fl, [0, 0, 0], 0.15))); }
+  if (id === 'ho') { for (let k = 0; k < 3; k++) { const x = 300 + k * 44, y = floorY(x); w.fillStyle = '#5f6a82'; w.fillRect(x, y - 24 - k * 4, 18, 26 + k * 4); w.fillStyle = '#7d89a3'; w.fillRect(x + 1, y - 24 - k * 4, 16, 3); } }
+  if (id === 'bien') {
+    const cols = ['#ff6b6b', '#ff9f5a', '#d86bff', '#ffd45a'];
+    for (let i = 0; i < 12; i++) { const x = 110 + i * 31 + (rnd() * 12 | 0), y = floorY(x), col = cols[i % 4], h = 8 + (rnd() * 12 | 0); w.fillStyle = col; for (let k = 0; k < h; k++) { w.fillRect(x - (k >> 2), y - k, 2, 1); w.fillRect(x + 3 + (k >> 2), y - k, 2, 1); w.fillRect(x + 1, y - k - 3, 2, 1); } }
+  }
+  if (id === 'hang') {
+    for (let i = 0; i < 10; i++) { const x = 130 + i * 36 + (rnd() * 14 | 0), y = floorY(x), h = 10 + (rnd() * 18 | 0); for (let k = 0; k < h; k++) { const ww = Math.max(0, Math.floor((h - k) * 0.22)); w.fillStyle = k > h * 0.55 ? '#c8f6ff' : '#3cc2e6'; w.fillRect(x - ww, y - k, 2 * ww + 1, 1); } }
+  }
+  if (id === 'ao') { for (let i = 0; i < 16; i++) { const x = 100 + rnd() * 370 | 0; w.fillStyle = '#2f7a46'; w.fillRect(x, SURF, 8, 2); w.fillStyle = '#3d9a58'; w.fillRect(x + 1, SURF - 1, 6, 1); if (i % 4 === 0) { w.fillStyle = '#f19ac2'; w.fillRect(x + 3, SURF - 3, 2, 2); } } }
+  /* bờ trái + ván cầu */
+  for (let y = SURF - 2; y < VH; y += 4) { w.fillStyle = rgbStr(mixRgb([106, 82, 54], [30, 22, 16], clamp((y - SURF) / 170, 0, 1))); w.fillRect(0, y, 30 + Math.max(0, (y - SURF) * 0.1), 4); }
+  w.fillStyle = '#4a7a3a'; w.fillRect(0, SURF - 3, 30, 3); w.fillStyle = '#69a64f'; w.fillRect(0, SURF - 3, 30, 1);
+  w.fillStyle = 'rgba(0,0,0,.28)'; w.fillRect(30, SURF + 5, DOCKW - 30, 22);
+  [20, 66].forEach(px => { w.fillStyle = '#4d3a26'; w.fillRect(px, SURF + 4, 4, floorY(px) - SURF - 4); w.fillStyle = '#6a5136'; w.fillRect(px, SURF + 4, 1, floorY(px) - SURF - 4); });
+  w.fillStyle = '#8a6a44'; w.fillRect(0, SURF, DOCKW, 5);
+  w.fillStyle = '#a98558'; w.fillRect(0, SURF, DOCKW, 1);
+  for (let x = 6; x < DOCKW; x += 12) { w.fillStyle = '#5e4630'; w.fillRect(x, SURF + 1, 1, 4); }
+  w.fillStyle = '#5e4630'; w.fillRect(0, SURF + 4, DOCKW, 1);
+  return { sc, wt };
+}
+const SCENES = {};
+function sceneFor(lake) { return SCENES[lake.id] || (SCENES[lake.id] = buildScene(lake)); }
+
+function drawSeaweed(ctx, lake, t) {
+  (SEAWEED[lake.id] || []).forEach(s => {
+    const fy = floorY(s.x);
+    for (let k = 0; k < s.h; k++) {
+      const sw = Math.sin(t * 1.6 + s.x * 0.05 + k * 0.17) * (1 + k * 0.07);
+      ctx.fillStyle = s.c ? (k % 4 < 2 ? '#e0719a' : '#c2517c') : (k % 5 < 3 ? '#2f7a4a' : '#3d9a5c');
+      ctx.fillRect(Math.round(s.x + sw), fy - k, s.c ? 3 : 2, 1);
+      if (!s.c && k % 6 === 3) { ctx.fillRect(Math.round(s.x + sw - 3), fy - k, 3, 1); ctx.fillRect(Math.round(s.x + sw + 2), fy - k - 2, 3, 1); }
+    }
+  });
+}
+function drawClouds(ctx, clouds, dark, weather) {
+  const base = weather === 'âm u' || weather === 'mưa' ? [150, 158, 166] : [255, 255, 255];
+  const col = mixRgb(base, [30, 40, 70], dark * 0.8);
+  ctx.fillStyle = rgbStr(col);
+  clouds.forEach(c => {
+    const n = weather === 'nắng' || weather === 'sương' ? 1 : 1.4;
+    ctx.globalAlpha = weather === 'sương' ? 0.5 : 0.92;
+    ctx.fillRect(Math.round(c.x), c.y, c.w, 4); ctx.fillRect(Math.round(c.x) + 6, c.y - 4, c.w - 14, 4); ctx.fillRect(Math.round(c.x) + 14, c.y - 7, c.w * 0.4, 3);
+    if (n > 1) ctx.fillRect(Math.round(c.x) - 4, c.y + 4, c.w + 8, 3);
+  });
+  ctx.globalAlpha = 1;
+}
+
+/* ===== LƯU CÁ: IndexedDB (ảnh đã pixel hoá + thuộc tính loài) ===== */
+const DB = {
+  ok: false, db: null, mem: new Map(),
+  open() {
+    return new Promise(res => {
+      try {
+        const rq = indexedDB.open('caucapixel', 1);
+        rq.onupgradeneeded = () => { rq.result.createObjectStore('fish', { keyPath: 'id' }); };
+        rq.onsuccess = () => { this.db = rq.result; this.ok = true; res(true); };
+        rq.onerror = () => res(false); rq.onblocked = () => res(false);
+      } catch (e) { res(false); }
+    });
+  },
+  all() {
+    if (!this.ok) return Promise.resolve([...this.mem.values()]);
+    return new Promise(res => {
+      try { const rq = this.db.transaction('fish').objectStore('fish').getAll(); rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]); } catch (e) { res([]); }
+    });
+  },
+  put(rec) {
+    this.mem.set(rec.id, rec);
+    if (!this.ok) return Promise.resolve(false);
+    return new Promise(res => {
+      try { const tx = this.db.transaction('fish', 'readwrite'); tx.objectStore('fish').put(rec); tx.oncomplete = () => res(true); tx.onerror = tx.onabort = () => res(false); } catch (e) { res(false); }
+    });
+  },
+  del(id) {
+    this.mem.delete(id);
+    if (!this.ok) return Promise.resolve(false);
+    return new Promise(res => {
+      try { const tx = this.db.transaction('fish', 'readwrite'); tx.objectStore('fish').delete(id); tx.oncomplete = () => res(true); tx.onerror = tx.onabort = () => res(false); } catch (e) { res(false); }
+    });
+  },
+  clear() {
+    this.mem.clear();
+    if (!this.ok) return Promise.resolve(false);
+    return new Promise(res => {
+      try { const tx = this.db.transaction('fish', 'readwrite'); tx.objectStore('fish').clear(); tx.oncomplete = () => res(true); tx.onerror = tx.onabort = () => res(false); } catch (e) { res(false); }
+    });
+  }
+};
+
+let FISH = [], FISHMAP = {};
+const RECS = {};
+const FISH_PROPS = ['name', 'lake', 'rar', 'wmin', 'wmax', 'price', 'pow', 'pat', 'zone', 'likes', 'when', 'col', 'len', 'desc'];
+function mergeFish(d, r) {
+  const o = d ? Object.assign({}, d) : { id: r.id };
+  FISH_PROPS.forEach(k => { if (r[k] !== undefined) o[k] = r[k]; });
+  o.custom = !d; o.rec = r;
+  return o;
+}
+function decodeSprite(url) {
+  return dataUrlToImage(url).then(im => { const c = mkCanvas(im.width, im.height); c.getContext('2d').drawImage(im, 0, 0); return c; });
+}
+async function rebuildFish() {
+  const recs = await DB.all();
+  Object.keys(RECS).forEach(k => delete RECS[k]);
+  recs.forEach(r => { RECS[r.id] = r; });
+  const defIds = new Set(FISH_DEFAULT.map(f => f.id)), list = [];
+  FISH_DEFAULT.forEach(d => { const r = RECS[d.id]; list.push(r ? mergeFish(d, r) : Object.assign({}, d, { custom: false, rec: null })); });
+  recs.forEach(r => { if (!defIds.has(r.id)) list.push(mergeFish(null, r)); });
+  FISH = list; FISHMAP = {}; list.forEach(f => { FISHMAP[f.id] = f; });
+  await Promise.all(list.map(async f => {
+    try {
+      if (f.rec && f.rec.sprite) { setSprite(f.id, await decodeSprite(f.rec.sprite), f.rec.mouthY, false); return; }
+      if (BAKED[f.id] && !(f.rec && f.rec.noImage)) { setSprite(f.id, await decodeSprite(BAKED[f.id].sprite), BAKED[f.id].mouthY, false); return; }
+    } catch (e) { /* rơi xuống cá mẫu */ }
+    const p = makePlaceholder(f); setSprite(f.id, p.canvas, p.mouthY, true);
+  }));
+}
+function fishById(id) { return FISHMAP[id]; }
+
+/* ===== GAME CÂU CÁ: trạng thái, cơ chế, vẽ ===== */
+const SAVE_KEY = 'caucapixel_save_v1';
+function newSave() {
+  return {
+    money: CFG.startMoney, xp: 0, level: 1, sp: 0,
+    pass: { line: 0, hands: 0, haggle: 0, eye: 0, arms: 0, frugal: 0 },
+    rods: ['bamboo'], rod: 'bamboo', baits: { rice: 20, worm: 12 }, bait: 'worm',
+    lake: 'ao', unlocked: ['ao'], bag: [], journal: {}, claimed: {}, story: [],
+    stats: { caught: 0, lost: 0, earned: 0 }, clock: 6.5 * 60, intro: false, ended: false
+  };
+}
+let S = newSave();
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY); if (!raw) return;
+    const o = JSON.parse(raw), d = newSave();
+    S = Object.assign(d, o); S.pass = Object.assign(d.pass, o.pass || {}); S.stats = Object.assign(d.stats, o.stats || {});
+  } catch (e) { /* bỏ qua */ }
+}
+let saveDirty = false;
+function saveSoon() { saveDirty = true; }
+function saveNow() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* bỏ qua */ } saveDirty = false; }
+
+const xpNeed = l => Math.round(24 * Math.pow(l, 1.55));
+const rod = () => RODS.find(r => r.id === S.rod) || RODS[0];
+const bait = () => BAITS.find(b => b.id === S.bait) || BAITS[0];
+const lakeNow = () => LAKES.find(l => l.id === S.lake) || LAKES[0];
+const hourNow = () => (S.clock / 60) % 24;
+function phaseNow() { const h = hourNow(); return h < 5 || h >= 19 ? 'tối' : h < 11 ? 'sáng' : h < 16 ? 'trưa' : 'chiều'; }
+const hookWindow = () => CFG.hookBase + rod().hook + 0.09 * S.pass.hands;
+const distToX = d => Math.round(110 + d * 340);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const salePrice = it => Math.round(it.v * (1 + 0.06 * S.pass.haggle));
+
+const G = {
+  st: 'idle', t: 0, power: 0, pdir: 1, dist: 0, bx: 0, by: SURF, dip: 0, hookY: 130, wait: 0, nibbleDur: 1, bf: null, fight: null, land: null, esc: null,
+  fx: [], amb: [], rain: [], motes: [], clouds: [], weather: 'nắng', wT: 70, time: 0, hold: false, shake: 0, flash: 0,
+  cool: { calm: 0, power: 0, scent: 0, sonar: 0 }, act: { calm: 0, power: 0, sonar: 0 }, scentArm: false, scentOn: false,
+  view: 'play', modal: false, tipX: 0, tipY: 0, rodAng: -0.75, rodBend: 3
+};
+let toastT = 0;
+
+/* ---------- chọn cá ---------- */
+function fishPool(lakeId) { return FISH.filter(f => f.lake === lakeId); }
+function pickFish(dist) {
+  const pool = fishPool(S.lake); if (!pool.length) return null;
+  const R = rod(), B = bait(), ph = phaseNow(), wx = G.weather, cave = S.lake === 'hang';
+  const items = pool.map(f => {
+    let w = RARITY[f.rar].w;
+    const zc = { s: 0.2, m: 0.55, d: 0.9 }[f.zone] || 0.5;
+    w *= 0.12 + Math.exp(-Math.pow((dist - zc) / 0.3, 2));
+    w *= (f.likes || []).includes(B.kind) ? 2.4 : 0.65;
+    if (!cave && f.when) {
+      if (f.when.t && f.when.t.length) w *= f.when.t.includes(ph) ? 2.2 : 0.45;
+      if (f.when.w && f.when.w.length) w *= f.when.w.includes(wx) ? 2.2 : 0.6;
+    }
+    if (f.rar >= 2) w *= (1 + R.luck + 0.08 * S.pass.eye) * (G.scentOn ? 2 : 1);
+    if (f.rar === 4) {
+      const okBait = B.kind === 'lure' || B.kind === 'glow', okRod = S.rod === 'pro' || S.rod === 'legend';
+      w = (okBait && okRod && dist >= 0.7) ? w * 8 : 0;
+    }
+    return { f, w };
+  });
+  let tot = items.reduce((a, b) => a + b.w, 0);
+  if (tot <= 0) return pool[0];
+  let r = Math.random() * tot;
+  for (const it of items) { r -= it.w; if (r <= 0) return it.f; }
+  return items[items.length - 1].f;
+}
+function rollWeight(f, dist) {
+  const r = Math.pow(Math.random(), clamp(2.4 - dist * 1.1, 1.0, 2.4));
+  const v = f.wmin + (f.wmax - f.wmin) * r;
+  return +(v).toFixed(f.wmax < 2 ? 2 : 1);
+}
+function baseValue(f, w) { const avg = (f.wmin + f.wmax) / 2; return Math.max(1, Math.round(f.price * Math.pow(w / avg, 0.9))); }
+
+/* ---------- hạt hiệu ứng ---------- */
+function emit(kind, x, y, n, o) {
+  o = o || {};
+  for (let i = 0; i < (n || 1); i++) {
+    if (kind === 'drop') G.fx.push({ k: 'drop', x, y, vx: rnd(-34, 34), vy: -rnd(40, 100), life: rnd(0.5, 0.9), max: 0.9, col: o.col || '#d8f4ff' });
+    else if (kind === 'bubble') G.fx.push({ k: 'bubble', x: x + rnd(-3, 3), y: y + rnd(-2, 2), vx: rnd(-4, 4), vy: -rnd(14, 30), life: rnd(0.9, 1.6), max: 1.6, col: '#cfeffb' });
+    else if (kind === 'ring') G.fx.push({ k: 'ring', x, y: SURF, r: 1, life: o.life || 0.9, max: o.life || 0.9, big: o.big || 11 });
+    else if (kind === 'spark') G.fx.push({ k: 'spark', x: x + rnd(-6, 6), y: y + rnd(-6, 6), vx: rnd(-20, 20), vy: -rnd(10, 40), life: rnd(0.5, 0.9), max: 0.9, col: o.col || '#ffe27a' });
+  }
+}
+function updateFx(dt) {
+  for (let i = G.fx.length - 1; i >= 0; i--) {
+    const p = G.fx[i]; p.life -= dt;
+    if (p.life <= 0) { G.fx.splice(i, 1); continue; }
+    if (p.k === 'drop') { p.vy += 240 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.y > SURF && p.vy > 0) { p.life = 0; } }
+    else if (p.k === 'bubble') { p.x += p.vx * dt; p.y += p.vy * dt; if (p.y < SURF + 1) p.life = 0; }
+    else if (p.k === 'spark') { p.x += p.vx * dt; p.y += p.vy * dt; }
+    else if (p.k === 'ring') { p.r = 1 + (1 - p.life / p.max) * p.big; }
+  }
+}
+function drawFx(ctx) {
+  G.fx.forEach(p => {
+    const a = clamp(p.life / p.max, 0, 1);
+    if (p.k === 'ring') {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.7 * a) + ')';
+      const rx = p.r * 1.6, ry = Math.max(1, p.r * 0.35);
+      for (let i = 0; i < 28; i++) { const an = i / 28 * Math.PI * 2; ctx.fillRect(Math.round(p.x + Math.cos(an) * rx), Math.round(SURF + 1 + Math.sin(an) * ry), 1, 1); }
+    } else if (p.k === 'bubble') {
+      ctx.fillStyle = 'rgba(207,239,251,' + (0.8 * a) + ')'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
+      ctx.fillStyle = 'rgba(20,70,100,' + (0.5 * a) + ')'; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y) + 1, 1, 1);
+    } else { ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); ctx.globalAlpha = 1; }
+  });
+}
+
+/* ---------- môi trường ---------- */
+function initWorld() {
+  G.clouds = []; for (let i = 0; i < 8; i++) G.clouds.push({ x: rnd(0, VW), y: 8 + Math.random() * 46 | 0, w: 30 + Math.random() * 40 | 0, s: rnd(1.5, 4) });
+  G.rain = []; for (let i = 0; i < 90; i++) G.rain.push({ x: rnd(0, VW), y: rnd(0, SURF), s: rnd(180, 260) });
+  G.motes = []; for (let i = 0; i < 40; i++) G.motes.push({ x: rnd(DOCKW, VW), y: rnd(SURF + 6, VH - 10), p: rnd(0, 6), s: rnd(2, 6) });
+  buildAmbient();
+}
+function buildAmbient() {
+  G.amb = [];
+  const pool = fishPool(S.lake); if (!pool.length) return;
+  const tot = pool.reduce((a, f) => a + RARITY[f.rar].w, 0);
+  for (let i = 0; i < 6; i++) {
+    let r = Math.random() * tot, f = pool[0];
+    for (const c of pool) { r -= RARITY[c.rar].w; if (r <= 0) { f = c; break; } }
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    G.amb.push({ f, x: rnd(DOCKW + 30, VW - 40), y: 0, by: rnd(SURF + 22, 232), dir, spd: rnd(7, 18), ph: rnd(0, 6) });
+  }
+}
+function changeWeather() {
+  const opts = [['nắng', 40], ['âm u', 25], ['mưa', 20], ['sương', 15]].filter(o => o[0] !== G.weather);
+  let tot = opts.reduce((a, b) => a + b[1], 0), r = Math.random() * tot;
+  for (const o of opts) { r -= o[1]; if (r <= 0) { G.weather = o[0]; break; } }
+  G.wT = rnd(60, 120);
+}
+function updateWorld(dt) {
+  G.clouds.forEach(c => { c.x += c.s * dt; if (c.x > VW + 10) { c.x = -c.w - 10; c.y = 8 + Math.random() * 46 | 0; } });
+  G.amb.forEach(a => {
+    a.x += a.dir * a.spd * dt; a.ph += dt * (2 + a.spd * 0.25);
+    a.y = a.by + Math.sin(G.time * 0.7 + a.ph) * 4;
+    const s = SPR[a.f.id], hw = s ? s.canvas.width / 2 : 20;
+    if (a.x < DOCKW + hw + 4) a.dir = 1; if (a.x > VW - hw - 4) a.dir = -1;
+    a.y = clamp(a.y, SURF + 14, floorY(a.x) - 12);
+  });
+  if (G.weather === 'mưa' && S.lake !== 'hang') G.rain.forEach(r => {
+    r.y += r.s * dt; r.x -= 30 * dt;
+    if (r.y >= SURF) { if (Math.random() < 0.3) emit('ring', r.x, SURF, 1, { life: 0.5, big: 4 }); r.y = rnd(-20, 0); r.x = rnd(0, VW + 40); }
+  });
+  G.motes.forEach(m => { m.y -= m.s * 0.3 * dt; m.x += Math.sin(G.time + m.p) * 0.2; if (m.y < SURF + 4) { m.y = VH - 10; m.x = rnd(DOCKW, VW); } });
+}
+
+/* ---------- thao tác ---------- */
+function uiLocked() { return G.modal || G.view !== 'play'; }
+function pressDown() {
+  if (uiLocked()) return;
+  switch (G.st) {
+    case 'idle': startPower(); break;
+    case 'power': lockPower(); break;
+    case 'waiting': beginReel('Thu cần về.', null); break;
+    case 'nibble': beginReel('Giật sớm quá, cá sợ bỏ đi.', 'bad'); break;
+    case 'bite': setHook(); break;
+    case 'fight': G.hold = true; break;
+  }
+}
+function pressUp() { G.hold = false; }
+function startPower() {
+  if ((S.baits[S.bait] || 0) <= 0) { toast('Hết ' + bait().name + '. Chọn mồi khác hoặc mua thêm trong cửa hàng.', 'bad'); return; }
+  if (!fishPool(S.lake).length) { toast('Hồ này chưa có loài cá nào.', 'bad'); return; }
+  G.st = 'power'; G.power = 0; G.pdir = 1; G.t = 0;
+}
+function lockPower() {
+  G.dist = clamp(G.power, 0.1, 1) * rod().range;
+  if (Math.random() >= 0.08 * S.pass.frugal) { S.baits[S.bait] = Math.max(0, (S.baits[S.bait] || 0) - 1); }
+  G.scentOn = G.scentArm; G.scentArm = false;
+  G.bx = distToX(G.dist); G.by = SURF; G.dip = 0;
+  G.hookY = clamp(SURF + 18 + G.dist * 90, SURF + 18, floorY(G.bx) - 12);
+  G.st = 'casting'; G.t = 0; saveSoon();
+}
+function landBobber() {
+  emit('drop', G.bx, SURF, 8); emit('ring', G.bx, SURF, 1);
+  const f = pickFish(G.dist);
+  G.bf = f ? { f, w: rollWeight(f, G.dist), state: 'hidden', x: 0, y: 0, ph: 0, x0: 0, y0: 0 } : null;
+  const speed = bait().attr * (G.scentOn ? 2 : 1);
+  G.wait = rnd(2.6, 7.2) / speed; G.st = 'waiting'; G.t = 0;
+}
+function beginReel(msg, kind) {
+  if (msg) toast(msg, kind);
+  G.st = 'reel'; G.t = 0; G.fight = null; G.hold = false; G.rx0 = G.bx;
+  if (G.bf && G.bf.state !== 'hidden') G.bf.leave = true;
+}
+function setHook() {
+  const f = G.bf.f;
+  G.hold = true; G.shake = 3;
+  const R = rod(), ratio = clamp(f.pow / (R.power * (1 + 0.1 * S.pass.line)), 0.45, 2.4);
+  const P = PATTERNS[f.pat] || PATTERNS.steady;
+  G.fight = {
+    f, w: G.bf.w, ratio, work: 3.2 + 2.2 * f.pow, T: 0.3, prog: 0.07, stam: 1, ph: 'calm', tm: 0, dur: 1, nextDash: rnd(P.every[0], P.every[1]) * 0.7 + 1.2,
+    snap: 0, slack: 0, t: 0, pull: 0, env: 0, sweet: false, sx: G.bx, sy: G.hookY, x: G.bx, y: G.hookY, ap: 0, amp: 2, tilt: 0
+  };
+  G.st = 'fight'; G.t = 0;
+  emit('drop', G.bx, SURF, 6); emit('bubble', G.bx, G.hookY, 5);
+  toast('Dính rồi! Giữ chuột để cuộn, nhả khi cá lao.', 'good');
+}
+function failFight(msg, kind) {
+  const F = G.fight;
+  S.stats.lost++; saveSoon();
+  const spr = SPR[F.f.id];
+  G.esc = { id: F.f.id, x: F.x, y: F.y, t: 0, spr: spr && spr.canvas };
+  emit('bubble', F.x, F.y, 8);
+  beginReel(msg, kind || 'bad');
+}
+
+/* ---------- vòng cập nhật ---------- */
+function updateGame(dt) {
+  G.time += dt;
+  S.clock += dt * CFG.clockSpeed; if (S.clock >= 1440) S.clock -= 1440;
+  G.wT -= dt; if (G.wT <= 0) changeWeather();
+  Object.keys(G.cool).forEach(k => { G.cool[k] = Math.max(0, G.cool[k] - dt); });
+  Object.keys(G.act).forEach(k => { G.act[k] = Math.max(0, G.act[k] - dt); });
+  G.shake = Math.max(0, G.shake - dt * 14);
+  updateWorld(dt); updateFx(dt);
+  const R = rod();
+  switch (G.st) {
+    case 'idle': G.rodAng = -0.75; G.rodBend = 3; break;
+    case 'power':
+      G.power += G.pdir * dt * 1.15;
+      if (G.power >= 1) { G.power = 1; G.pdir = -1; } if (G.power <= 0) { G.power = 0; G.pdir = 1; }
+      G.rodAng = -0.75 - 0.9 * G.power; G.rodBend = 2; break;
+    case 'casting': {
+      G.t += dt;
+      const sw = 0.2, fl = 0.45 + 0.35 * G.dist;
+      if (G.t < sw) { G.rodAng = lerp(-1.65, -0.3, G.t / sw); G.rodBend = 6; }
+      else {
+        G.rodAng = lerp(-0.3, -0.75, clamp((G.t - sw) / 0.4, 0, 1)); G.rodBend = 3;
+        const u = clamp((G.t - sw) / fl, 0, 1);
+        G.fly = { x: lerp(G.tipX, G.bx, u), y: lerp(G.tipY, SURF, u) - Math.sin(u * Math.PI) * (28 + 40 * G.dist) };
+        if (u >= 1) { G.fly = null; landBobber(); }
+      }
+      break;
+    }
+    case 'waiting': {
+      G.t += dt; G.wait -= dt; G.rodAng = -0.75; G.rodBend = 3;
+      G.dip = Math.sin(G.time * 1.6) * 0.6;
+      const bf = G.bf;
+      if (bf && bf.state === 'hidden' && G.wait < 2.8) {
+        bf.state = 'approach'; bf.x0 = Math.min(VW - 40, G.bx + 90 + Math.random() * 70); bf.y0 = clamp(G.hookY + rnd(-18, 30), SURF + 14, floorY(G.bx) - 12); bf.u0 = G.wait;
+      }
+      if (bf && bf.state === 'approach') {
+        const s = SPR[bf.f.id], hw = s ? s.canvas.width / 2 : 20, u = 1 - clamp(G.wait / bf.u0, 0, 1), e = 1 - Math.pow(1 - u, 2);
+        bf.x = lerp(bf.x0, G.bx + hw - 3, e); bf.y = lerp(bf.y0, G.hookY, e); bf.ph += dt * 6;
+      }
+      if (G.wait <= 0) {
+        if (!bf) { beginReel('Hôm nay không có cá nào cắn.', null); break; }
+        G.st = 'nibble'; G.t = 0; G.nibbleDur = rnd(0.9, 2.1); bf.state = 'nibble';
+      }
+      break;
+    }
+    case 'nibble': {
+      G.t += dt; G.rodAng = -0.75; G.rodBend = 3 + Math.sin(G.t * 40) * 1.2;
+      G.dip = (Math.sin(G.t * 26) > 0.5 ? 1 : 0) + (G.t % 0.55 < 0.1 ? 2 : 0);
+      const bf = G.bf, s = SPR[bf.f.id], hw = s ? s.canvas.width / 2 : 20;
+      bf.x = G.bx + hw - 3 + Math.sin(G.t * 30) * 1.2; bf.y = G.hookY + Math.sin(G.t * 11) * 1.5; bf.ph += dt * 10;
+      if (G.t >= G.nibbleDur) { G.st = 'bite'; G.t = 0; G.shake = 4; bf.state = 'bite'; emit('drop', G.bx, SURF, 5); emit('ring', G.bx, SURF, 1); }
+      break;
+    }
+    case 'bite': {
+      G.t += dt; G.dip = 6; G.rodAng = -0.75; G.rodBend = 9;
+      const bf = G.bf; bf.ph += dt * 14;
+      if (G.t > hookWindow()) { beginReel('Cá nhả mồi rồi, nhanh tay hơn nhé.', null); }
+      break;
+    }
+    case 'fight': updateFight(dt); break;
+    case 'landing': {
+      const L = G.land; L.t += dt; G.rodAng = -1.25; G.rodBend = 10;
+      if (L.t >= L.dur) { G.land = null; G.st = 'idle'; showCatchModal(L.res); }
+      break;
+    }
+    case 'reel': {
+      G.t += dt; G.hold = false; G.rodAng = lerp(-1.0, -0.75, clamp(G.t / 0.7, 0, 1)); G.rodBend = 3;
+      const u = clamp(G.t / 0.7, 0, 1);
+      G.bx = lerp(G.rx0 == null ? G.bx : G.rx0, DOCKW + 6, u); G.by = SURF; G.dip = 0;
+      if (G.bf) { G.bf.leave = true; G.bf.x += 60 * dt; }
+      if (u >= 1) { G.st = 'idle'; G.bf = null; G.rx0 = null; }
+      break;
+    }
+  }
+  if (G.esc) { G.esc.t += dt; G.esc.x += 90 * dt; if (G.esc.t > 0.9) G.esc = null; }
+  if (G.st !== 'fight') fightHudHide(); else fightHudUpdate();
+  meterSync();
+}
+
+function updateFight(dt) {
+  const F = G.fight, f = F.f, P = PATTERNS[f.pat] || PATTERNS.steady, R = rod();
+  F.t += dt;
+  if (F.ph === 'calm') { F.nextDash -= dt; if (F.nextDash <= 0 && P.dash > 0) { F.ph = 'warn'; F.tm = 0.5; } }
+  else if (F.ph === 'warn') { F.tm -= dt; if (F.tm <= 0) { F.ph = 'dash'; F.dur = rnd(P.dur[0], P.dur[1]); F.tm = F.dur; } }
+  else { F.tm -= dt; if (F.tm <= 0) { F.ph = 'calm'; F.nextDash = rnd(P.every[0], P.every[1]); } }
+  const ratio = F.ratio * (0.6 + 0.4 * F.stam) * (G.act.calm > 0 ? 0.45 : 1);
+  const w1 = Math.sin(F.t * P.wf), w2 = Math.sin(F.t * P.wf * 2.3 + 1.3) * 0.5;
+  const base = Math.max(0.02, P.base + P.wave * (w1 + w2) * 0.7) * ratio;
+  let env = 0; if (F.ph === 'dash') { const u = 1 - F.tm / F.dur; env = Math.pow(Math.sin(Math.PI * clamp(u, 0, 1)), 0.6); }
+  const pull = base + P.dash * ratio * env; F.pull = pull; F.env = env;
+  const reeling = G.hold;
+  const target = reeling ? pull + CFG.reelStrain * (G.act.power > 0 ? 1.12 : 1) : pull * CFG.releaseFactor;
+  F.T = clamp(F.T + (target - F.T) * Math.min(1, dt / 0.2), 0, 1.3);
+  F.sweet = F.T >= CFG.sweetLo && F.T <= CFG.sweetHi;
+  if (reeling) F.prog += R.reel * (1 + 0.07 * S.pass.arms) * (G.act.power > 0 ? 2 : 1) * (F.sweet ? 1.3 : 1) / F.work * dt * (F.ph === 'dash' ? 0.55 : 1);
+  else F.prog -= (0.025 + (F.ph === 'dash' ? 0.07 * ratio : 0)) * dt;
+  F.prog = clamp(F.prog, 0, 1.02);
+  F.stam = Math.max(0.12, F.stam - dt * ((reeling && F.T > CFG.sweetLo) ? 0.05 : 0.012));
+  if (F.T > CFG.snapAt) F.snap += dt; else F.snap = Math.max(0, F.snap - dt * 1.5);
+  if (F.T < CFG.slackAt) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2);
+  G.rodAng = -0.95 + 0.2 * F.T; G.rodBend = 4 + 16 * clamp(F.T, 0, 1.1);
+  if (F.snap > CFG.snapTime) { failFight('Dây đứt rồi!', 'bad'); return; }
+  if (F.slack > CFG.slackTime) { failFight('Dây chùng, cá thoát mất.', 'bad'); return; }
+  if (F.prog >= 1) { landFish(); return; }
+  const e = 1 - Math.pow(1 - F.prog, 2);
+  const spr = SPR[f.id], hw = spr ? spr.canvas.width / 2 : 20;
+  F.x = clamp(lerp(F.sx, distToX(0.04) + hw, e) + F.env * 12 + Math.sin(F.t * 1.7) * 3, DOCKW + hw + 6, VW - hw - 4);
+  F.y = clamp(lerp(F.sy, SURF + 24, e * 0.85) + Math.sin(F.t * 2.3) * 4 + (f.pat === 'dive' ? F.env * 18 : 0), SURF + 14, floorY(F.x) - 12);
+  F.ap += dt * (5 + 14 * F.pull + (F.ph === 'dash' ? 8 : 0));
+  F.amp = 1.2 + 5 * F.T + (F.ph === 'dash' ? 3 : 0) + (F.ph === 'warn' ? 1.5 : 0);
+  F.tilt = Math.sin(F.t * (6 + 10 * F.pull)) * (0.05 + 0.22 * clamp(F.T, 0, 1)) + (F.ph === 'dash' ? 0.1 : 0);
+  if (Math.random() < dt * (1 + 6 * F.T)) emit('bubble', F.x, F.y - 4, 1);
+  if (F.ph === 'dash' && Math.random() < dt * 14) emit('bubble', F.x + hw, F.y, 1);
+}
+
+function landFish() {
+  const F = G.fight, f = F.f, w = F.w, v = baseValue(f, w);
+  const j = S.journal[f.id] || (S.journal[f.id] = { n: 0, best: 0, first: Date.now() });
+  const isNew = j.n === 0, record = w > j.best && j.n > 0;
+  j.n++; if (w > j.best) j.best = w;
+  S.bag.push({ fid: f.id, w, v, t: Date.now() });
+  S.stats.caught++;
+  const xp = Math.round(5 + f.pow * 7 + f.rar * 12) + (isNew ? 10 : 0);
+  S.xp += xp;
+  const ups = [], unlocked = [];
+  while (S.xp >= xpNeed(S.level)) {
+    S.xp -= xpNeed(S.level); S.level++; S.sp++; ups.push(S.level);
+    ACTIVE_SKILLS.forEach(k => { if (k.lvl === S.level) unlocked.push(k.name); });
+  }
+  const mouthSpr = SPR[f.id];
+  G.land = { t: 0, dur: 0.95, f, x0: F.x, y0: F.y, res: { f, w, v, isNew, record, xp, ups, unlocked, legend: f.rar === 4 } };
+  G.st = 'landing'; G.hold = false; G.fight = null; G.bf = null;
+  emit('drop', F.x, SURF, 12); emit('ring', F.x, SURF, 1, { big: 16 });
+  saveSoon();
+}
+
+/* ---------- kỹ năng ---------- */
+function useSkill(id) {
+  const sk = ACTIVE_SKILLS.find(k => k.id === id); if (!sk || uiLocked()) return;
+  if (S.level < sk.lvl) { toast('Kỹ năng ' + sk.name + ' mở ở cấp ' + sk.lvl + '.', 'bad'); return; }
+  if (G.cool[id] > 0) return;
+  if ((id === 'calm' || id === 'power') && G.st !== 'fight') { toast(sk.name + ' dùng khi đang kéo cá.', 'bad'); return; }
+  if (id === 'scent') {
+    if (G.st !== 'idle' && G.st !== 'power') { toast('Mồi thơm dùng trước khi quăng cần.', 'bad'); return; }
+    G.scentArm = true; toast('Mồi thơm đã sẵn sàng cho lần quăng tới.', 'good');
+  } else if (id === 'sonar') { G.act.sonar = sk.dur; toast('Sonar đang quét dưới nước.', 'good'); }
+  else { G.act[id] = sk.dur; toast(sk.name + '!', 'good'); }
+  G.cool[id] = sk.cd; emit('spark', 60, 80, 8);
+}
+
+/* ---------- vẽ ---------- */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+let fogGrad = null;
+function drawExcl(c, x, y, col) {
+  x = Math.round(x); y = Math.round(y);
+  c.fillStyle = '#1a1a22'; c.fillRect(x - 3, y - 1, 6, 12); c.fillStyle = col; c.fillRect(x - 2, y, 4, 7); c.fillRect(x - 2, y + 8, 4, 2);
+}
+function sonarLabel(c, id, x, y) {
+  const f = fishById(id); if (!f) return;
+  const known = S.journal[id] && S.journal[id].n > 0, txt = known ? f.name : '???';
+  c.font = '11px VT323, monospace'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  c.fillStyle = '#05101a'; c.fillText(txt, Math.round(x) + 1, Math.round(y) + 1);
+  c.fillStyle = RARITY[f.rar].col; c.fillText(txt, Math.round(x), Math.round(y));
+}
+function drawSub(c, id, x, y, o, sonar) {
+  const s = SPR[id]; if (!s) return;
+  if (sonar) { drawFishWavy(c, s.canvas, x, y, Object.assign({ alpha: 0.95 }, o)); sonarLabel(c, id, x, y - s.canvas.height / 2 - 4); }
+  else { const sl = silhouette(id); if (sl) drawFishWavy(c, sl, x, y, Object.assign({ alpha: G.st === 'fight' ? 0.12 : 0.24 }, o)); }
+}
+function render() {
+  const L = lakeNow(), sc = sceneFor(L), cave = L.id === 'hang', hour = hourNow();
+  const sky = skyAt(hour, L, G.weather), t = G.time;
+  ctx.save();
+  if (G.shake > 0) ctx.translate(Math.round(rnd(-1, 1) * G.shake * 0.5), Math.round(rnd(-1, 1) * G.shake * 0.5));
+  if (!cave) { drawSky(ctx, sky); drawCelestial(ctx, hour, sky.dark, G.weather, t); drawClouds(ctx, G.clouds, sky.dark, G.weather); }
+  ctx.drawImage(sc.sc, 0, 0); ctx.drawImage(sc.wt, 0, 0);
+  /* ánh sáng dưới nước */
+  for (let i = 0; i < 9; i++) { const x = (i * 63 + t * 7) % (VW + 30) - 15; ctx.fillStyle = 'rgba(255,255,255,' + (cave ? 0.02 : 0.05) + ')'; ctx.fillRect(x | 0, SURF + 6 + i * 15, 26, 1); }
+  if (cave) G.motes.forEach(m => { ctx.fillStyle = 'rgba(127,255,255,' + (0.25 + 0.25 * Math.sin(t * 2 + m.p)) + ')'; ctx.fillRect(Math.round(m.x), Math.round(m.y), 1, 1); });
+  else G.motes.forEach(m => { ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(Math.round(m.x), Math.round(m.y), 1, 1); });
+  drawSeaweed(ctx, L, t);
+  const sonar = G.act.sonar > 0;
+  /* cá dưới nước */
+  G.amb.forEach(a => drawSub(ctx, a.f.id, a.x, a.y, { flip: a.dir < 0, amp: 2.2, phase: a.ph, freq: 1.0 }, sonar));
+  const hx = G.bx, hy = G.hookY;
+  if (G.bf && G.bf.state !== 'hidden' && (G.st === 'waiting' || G.st === 'nibble' || G.st === 'bite' || G.st === 'reel')) {
+    const bf = G.bf;
+    drawSub(ctx, bf.f.id, bf.x, bf.y, { flip: !bf.leave, amp: G.st === 'bite' ? 4 : 2.5, phase: bf.ph, freq: 1.0 }, sonar);
+  }
+  if (G.esc && G.esc.spr) { const sl = silhouette(G.esc.id); if (sl) drawFishWavy(ctx, sl, G.esc.x, G.esc.y, { flip: false, amp: 5, phase: G.esc.t * 30, alpha: 0.5 * (1 - G.esc.t / 0.9) }); }
+  const F = G.fight; let mouth = null;
+  if (F) {
+    const s = SPR[F.f.id];
+    if (s) {
+      const o = { flip: true, amp: F.amp, phase: F.ap, tilt: F.tilt, freq: 1.0 };
+      drawFishWavy(ctx, s.canvas, F.x, F.y, o);
+      mouth = fishMouth(s.canvas, s.mouthY, F.x, F.y, o);
+      if (F.ph === 'warn' && Math.floor(t * 12) % 2 === 0) drawExcl(ctx, F.x, F.y - s.canvas.height / 2 - 16, '#ffd23f');
+      if (F.ph === 'dash') drawExcl(ctx, F.x, F.y - s.canvas.height / 2 - 16, '#ff5a4a');
+    }
+  }
+  if (G.land) {
+    const Lm = G.land, u = clamp(Lm.t / Lm.dur, 0, 1), s = SPR[Lm.f.id];
+    const x = lerp(Lm.x0, 62, u), y = lerp(Lm.y0, SURF - 26, u) - Math.sin(u * Math.PI) * 52;
+    if (s) drawFishWavy(ctx, s.canvas, x, y, { flip: true, amp: 5 * (1 - u * 0.4), phase: Lm.t * 26, tilt: Math.sin(Lm.t * 20) * 0.35 });
+  }
+  /* mặt nước */
+  for (let x = DOCKW; x < VW; x += 5) { const a = Math.sin(t * 2 + x * 0.09); if (a > 0.55) { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x, SURF, 3, 1); } }
+  drawFx(ctx);
+  /* người câu, cần, dây */
+  const bob = G.st === 'idle' || G.st === 'waiting' ? (Math.sin(t * 2) > 0.8 ? 1 : 0) : 0;
+  drawFisher(ctx, bob);
+  const tip = drawRod(ctx, G.rodAng, 58, G.rodBend, HAND.y + bob);
+  G.tipX = tip.x; G.tipY = tip.y;
+  const lineCol = F ? (F.T > 0.8 ? '#ff7a6a' : F.T > 0.55 ? '#ffe08a' : '#f1f6f4') : '#f1f6f4';
+  if (G.st === 'idle' || G.st === 'power') drawLine(ctx, tip.x, tip.y, tip.x + 2, tip.y + 12, 1);
+  else if (G.st === 'casting') { if (G.fly) { drawLine(ctx, tip.x, tip.y, G.fly.x, G.fly.y, 5); ctx.fillStyle = '#e04a3a'; ctx.fillRect(Math.round(G.fly.x) - 1, Math.round(G.fly.y) - 1, 3, 3); } else drawLine(ctx, tip.x, tip.y, tip.x + 2, tip.y + 12, 1); }
+  else if (G.st === 'waiting' || G.st === 'nibble' || G.st === 'bite' || G.st === 'reel') {
+    const by = SURF + G.dip;
+    drawLine(ctx, tip.x, tip.y, G.bx, by - 6, G.st === 'bite' ? 3 : 7);
+    if (G.st !== 'reel') { drawLine(ctx, G.bx, by, G.bx, hy, 0, '#cfe6ea', 0.35); ctx.fillStyle = '#d9d9e0'; ctx.fillRect(Math.round(G.bx) - 1, Math.round(hy), 2, 2); }
+    drawBobber(ctx, G.bx, by);
+    if (G.st === 'bite') drawExcl(ctx, G.bx, SURF - 24, '#ff5a4a');
+  } else if (G.st === 'fight' && F && mouth) {
+    const jitter = F.T > 0.8 ? (Math.random() < 0.5 ? 1 : 0) : 0;
+    drawLine(ctx, tip.x, tip.y, mouth.x, mouth.y + jitter, 3 + (1 - clamp(F.T, 0, 1)) * 14, lineCol, 1);
+  } else if (G.st === 'landing') drawLine(ctx, tip.x, tip.y, tip.x + 3, tip.y + 10, 1);
+  /* thời tiết */
+  if (G.weather === 'mưa' && !cave) { ctx.fillStyle = 'rgba(200,225,240,.55)'; G.rain.forEach(r => { ctx.fillRect(Math.round(r.x), Math.round(r.y), 1, 4); }); }
+  if (G.weather === 'sương' && !cave) {
+    if (!fogGrad) { fogGrad = ctx.createLinearGradient(0, 0, VW, 0); fogGrad.addColorStop(0, 'rgba(225,235,240,.05)'); fogGrad.addColorStop(1, 'rgba(225,235,240,.55)'); }
+    ctx.fillStyle = fogGrad; ctx.fillRect(0, 0, VW, SURF + 40);
+  }
+  if (!cave && sky.dark > 0) { ctx.fillStyle = 'rgba(8,16,48,' + (sky.dark * 0.46) + ')'; ctx.fillRect(0, 0, VW, VH); }
+  if (cave) { ctx.fillStyle = 'rgba(0,0,10,.18)'; ctx.fillRect(0, 0, VW, VH); }
+  ctx.restore();
+}
+
+/* ---------- vòng lặp ---------- */
+let lastT = 0, hudT = 0, saveT = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
+  if (G.view === 'play' && !document.hidden) {
+    if (!G.modal) updateGame(dt); else { G.time += dt; updateWorld(dt); updateFx(dt); }
+    render();
+  }
+  hudT += dt; if (hudT > 0.12) { hudT = 0; hudTick(); }
+  saveT += dt; if (saveT > 6) { saveT = 0; if (saveDirty) saveNow(); }
+}
+
+/* ===== GIAO DIỆN: HUD, cửa hàng, túi cá, sổ cá, kỹ năng, bản đồ ===== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const fmtKg = w => w.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' kg';
+const SLUG = { play: 'choi', shop: 'cua-hang', bag: 'tui-ca', skills: 'ky-nang', map: 'ban-do', admin: 'admin' };
+const VIEW_OF = Object.fromEntries(Object.entries(SLUG).map(([k, v]) => [v, k]));
+
+/* ---------- thông báo ---------- */
+function toast(msg, kind) {
+  const t = $('toast'); t.textContent = msg; t.className = 'toast ' + (kind || ''); t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2200);
+}
+function openModal(html, wire) {
+  $('mbox').innerHTML = html; $('modal').hidden = false; G.modal = true; G.hold = false;
+  if (wire) wire($('mbox'));
+}
+function closeModal() { $('modal').hidden = true; G.modal = false; }
+
+/* ---------- HUD ---------- */
+function clockText() { const m = Math.floor(S.clock) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+const HINTS = {
+  idle: 'Nhấn Space hoặc chạm vào khung để quăng cần. Cần càng tốt thì quăng càng xa.',
+  power: 'Nhấn lần nữa để chốt lực. Vạch trắng là tầm xa tối đa của cần. Xa bờ thì cá to và hiếm hơn.',
+  casting: '', waiting: 'Chờ cá cắn. Mồi hợp khẩu vị thì cá cắn nhanh. Nhấn để thu cần về.',
+  nibble: 'Cá đang rỉa mồi. Đừng vội, chờ phao chìm hẳn.', bite: 'PHAO CHÌM! DỰNG CẦN NGAY!',
+  fight: 'Giữ chuột để cuộn, nhả ra khi thấy dấu chấm than. Giữ thanh căng trong vùng xanh.', landing: '', reel: ''
+};
+const ACT_LABEL = { idle: 'QUĂNG CẦN', power: 'CHỐT LỰC', casting: '...', waiting: 'THU CẦN', nibble: 'ĐỪNG VỘI', bite: 'DỰNG CẦN!', fight: 'GIỮ ĐỂ CUỘN', landing: '...', reel: '...' };
+let lastBaitSig = '', skillsBuilt = false;
+function buildSkillBar() {
+  $('skillBar').innerHTML = ACTIVE_SKILLS.map((k, i) =>
+    '<button class="sk" type="button" data-skill="' + k.id + '" title="' + esc(k.desc) + '"><i class="cd"></i><b>' + (i + 1) + ' ' + esc(k.name) + '</b><small></small></button>').join('');
+  skillsBuilt = true;
+}
+function hudTick() {
+  $('cMoney').textContent = fmt(S.money) + ' xu';
+  $('cLevel').textContent = 'Cấp ' + S.level + (S.sp ? ' (+' + S.sp + ' điểm)' : '');
+  if (G.view !== 'play') return;
+  const L = lakeNow();
+  $('hLake').textContent = L.name;
+  $('hTime').textContent = L.id === 'hang' ? clockText() : clockText() + ' · ' + phaseNow() + ' · ' + G.weather;
+  if (!skillsBuilt) buildSkillBar();
+  $('skillBar').querySelectorAll('.sk').forEach((el, i) => {
+    const k = ACTIVE_SKILLS[i], lock = S.level < k.lvl, cd = G.cool[k.id], live = (G.act[k.id] || 0) > 0 || (k.id === 'scent' && G.scentArm);
+    el.classList.toggle('lock', lock); el.classList.toggle('live', live);
+    el.querySelector('.cd').style.width = (lock ? 0 : cd > 0 ? cd / k.cd * 100 : 0) + '%';
+    el.querySelector('small').textContent = lock ? 'Mở ở cấp ' + k.lvl : cd > 0 ? Math.ceil(cd) + ' giây' : live ? 'Đang chạy' : 'Sẵn sàng';
+  });
+  $('gRod').textContent = rod().name;
+  const sig = S.bait + '|' + JSON.stringify(S.baits);
+  if (sig !== lastBaitSig) {
+    lastBaitSig = sig;
+    const owned = BAITS.filter(b => (S.baits[b.id] || 0) > 0 || b.id === S.bait);
+    $('baitSel').innerHTML = owned.map(b => '<option value="' + b.id + '"' + (b.id === S.bait ? ' selected' : '') + '>' + esc(b.name) + ' x' + (S.baits[b.id] || 0) + '</option>').join('');
+  }
+  const st = G.st, a = $('act');
+  if (a.textContent !== ACT_LABEL[st]) a.textContent = ACT_LABEL[st];
+  a.disabled = st === 'casting' || st === 'landing' || st === 'reel';
+  a.classList.toggle('hot', st === 'bite');
+  $('hint').textContent = HINTS[st] || '';
+}
+function meterSync() {
+  const m = $('meter'), show = G.st === 'power';
+  if (m.hidden === show) m.hidden = !show;
+  if (show) { $('meterFill').style.width = (G.power * rod().range * 100) + '%'; $('meterMax').style.left = (rod().range * 100) + '%'; }
+}
+function fightHudHide() { const h = $('fhud'); if (!h.hidden) h.hidden = true; }
+function fightHudUpdate() {
+  const h = $('fhud'), F = G.fight; if (!F) return;
+  if (h.hidden) { h.hidden = false; const j = S.journal[F.f.id]; $('fName').textContent = j && j.n ? F.f.name : '???'; }
+  $('tMark').style.left = clamp(F.T, 0, 1) * 100 + '%';
+  $('pFill').style.width = clamp(F.prog, 0, 1) * 100 + '%';
+}
+
+/* ---------- hộp thoại ---------- */
+function showCatchModal(res) {
+  const f = res.f, rc = RARITY[f.rar].col;
+  const gains = ['+' + res.xp + ' kinh nghiệm'];
+  if (res.record) gains.push('Kỷ lục mới của loài này');
+  res.ups.forEach(l => gains.push('Lên cấp ' + l + ', nhận 1 điểm kỹ năng'));
+  res.unlocked.forEach(n => gains.push('Mở khoá kỹ năng ' + n));
+  openModal('<div class="row"><span class="badge" style="--rc:' + rc + '">' + RARITY[f.rar].name + '</span>' + (res.isNew ? '<span class="badge new">Loài mới trong sổ cá</span>' : '') + '</div>' +
+    '<div class="cwrap"><canvas id="catchCv"></canvas></div><h2>' + esc(f.name) + '</h2>' +
+    '<p><b>' + fmtKg(res.w) + '</b> · bán được khoảng <b>' + fmt(Math.round(res.v * (1 + 0.06 * S.pass.haggle))) + ' xu</b></p>' +
+    '<p class="muted small">' + esc(f.desc || '') + '</p><ul class="gain">' + gains.map(g => '<li>' + esc(g) + '</li>').join('') + '</ul>' +
+    '<div class="mbtns"><button class="btn" type="button" data-act="sellLast">Bán ngay</button><button class="btn pri" type="button" data-act="closeCatch">Giữ trong túi</button></div>',
+    box => {
+      const s = SPR[f.id], c = box.querySelector('#catchCv');
+      if (s) { c.width = s.canvas.width; c.height = s.canvas.height; c.getContext('2d').drawImage(s.canvas, 0, 0); const k = Math.max(1, Math.min(5, Math.floor(300 / s.canvas.width))); c.style.width = s.canvas.width * k + 'px'; }
+    });
+  G.pendingLegend = res.legend; saveSoon();
+}
+function closeCatch() {
+  closeModal();
+  if (G.pendingLegend && !S.ended) { G.pendingLegend = false; S.ended = true; saveSoon(); showStory('Kết thúc', STORY.end, 'Tiếp tục câu'); }
+}
+function showStory(title, text, btn) {
+  openModal('<h2>' + esc(title) + '</h2><p class="story">' + esc(text) + '</p><div class="mbtns"><button class="btn pri" type="button" data-act="closeModal">' + esc(btn || 'Đóng') + '</button></div>');
+}
+function showHelp() {
+  openModal('<h2>Cách chơi</h2><div class="story small">' +
+    '<p><b>1. Quăng.</b> Nhấn <kbd>Space</kbd> hoặc chạm khung chơi, nhấn lần nữa để chốt lực. Quăng xa thì cá to, hiếm nhưng khó kéo.</p>' +
+    '<p><b>2. Chờ và dựng cần.</b> Phao rung là cá đang rỉa mồi, đợi phao chìm hẳn rồi nhấn ngay. Sớm hay muộn quá cá đều thoát.</p>' +
+    '<p><b>3. Kéo cá.</b> Giữ <kbd>Space</kbd> hoặc giữ chuột để cuộn, nhả ra để chùng dây. Giữ vạch trắng trong vùng xanh. Căng quá dây đứt, chùng quá cá thoát. Khi cá hiện dấu chấm than là sắp lao, hãy nhả.</p>' +
+    '<p><b>4. Kỹ năng</b> bấm <kbd>1</kbd> đến <kbd>4</kbd>. <b>5. Bán cá</b> ở tab Túi và sổ cá, mua cần và mồi ở Cửa hàng, mở hồ mới ở Bản đồ.</p>' +
+    '<p class="muted">Tab Admin cho phép tải ảnh cá thật lên, tự tách nền và pixel hoá để thay cá trong game.</p></div>' +
+    '<div class="mbtns"><button class="btn pri" type="button" data-act="closeModal">Đã hiểu</button></div>');
+}
+
+/* ---------- cửa hàng ---------- */
+const statBar = (lbl, v, max) => '<div class="stat"><span>' + lbl + '</span><div class="bar"><i style="width:' + clamp(v / max, 0.04, 1) * 100 + '%"></i></div></div>';
+function renderShop() {
+  const rods = RODS.map((r, i) => {
+    const own = S.rods.includes(r.id), eq = S.rod === r.id;
+    const lakeRec = LAKES.filter(l => l.recRod === i).map(l => l.name).join(', ');
+    return '<div class="card' + (eq ? ' on' : '') + '"><div class="row sp"><h3>' + esc(r.name) + '</h3>' + (eq ? '<span class="tag" style="color:var(--teal)">Đang dùng</span>' : '') + '</div>' +
+      '<p class="muted small">' + esc(r.note) + (lakeRec ? ' Hợp với ' + esc(lakeRec) + '.' : '') + '</p>' +
+      statBar('Sức mạnh', r.power, 8) + statBar('Tốc độ cuộn', r.reel, 2) + statBar('Tầm quăng', r.range, 1) + statBar('Vận may', r.luck, 0.25) +
+      (own ? (eq ? '' : '<button class="btn" type="button" data-act="equipRod" data-id="' + r.id + '">Dùng cần này</button>') :
+        '<button class="btn pri" type="button" data-act="buyRod" data-id="' + r.id + '"' + (S.money < r.price ? ' disabled' : '') + '>Mua ' + fmt(r.price) + ' xu</button>') + '</div>';
+  }).join('');
+  const baits = BAITS.map(b => {
+    const q = S.baits[b.id] || 0, eq = S.bait === b.id;
+    return '<div class="item' + (eq ? ' on' : '') + '"><div class="grow"><b>' + esc(b.name) + '</b> <span class="muted small">' + esc(BAIT_KINDS[b.kind]) + ' · cá cắn nhanh x' + b.attr + ' · ' + b.price + ' xu một con</span><div class="small">Đang có: <b>' + q + '</b></div></div>' +
+      '<button class="btn" type="button" data-act="buyBait" data-id="' + b.id + '"' + (S.money < b.price * 10 ? ' disabled' : '') + '>Mua 10 (' + fmt(b.price * 10) + ' xu)</button>' +
+      (eq ? '<span class="tag" style="color:var(--teal)">Đang dùng</span>' : (q > 0 ? '<button class="btn ghost" type="button" data-act="equipBait" data-id="' + b.id + '">Dùng</button>' : '')) + '</div>';
+  }).join('');
+  $('v-shop').innerHTML = '<div class="stack"><div class="panel"><div class="row sp"><h2>Cần câu</h2><span class="chip">' + fmt(S.money) + ' xu</span></div><p class="muted small" style="margin:6px 0 12px">Cá hồ sau kéo rất khỏe, cần yếu là đứt dây. Mỗi hồ có ghi cần gợi ý ở tab Bản đồ.</p><div class="grid">' + rods + '</div></div>' +
+    '<div class="panel"><h2>Mồi câu</h2><p class="muted small" style="margin:6px 0 12px">Mỗi loài cá thích một loại mồi. Đúng khẩu vị thì dễ ra loài đó hơn. Mồi giả và mồi sáng là thứ cần để dụ cá huyền thoại.</p><div class="list">' + baits + '</div></div></div>';
+}
+
+/* ---------- túi cá và sổ cá ---------- */
+let bagTab = 'bag';
+function renderBag() {
+  const seg = '<div class="seg"><button class="btn' + (bagTab === 'bag' ? ' pri' : '') + '" type="button" data-act="bagTab" data-id="bag">Túi cá (' + S.bag.length + ')</button><button class="btn' + (bagTab === 'dex' ? ' pri' : '') + '" type="button" data-act="bagTab" data-id="dex">Sổ cá (' + Object.keys(S.journal).filter(k => FISHMAP[k]).length + '/' + FISH.length + ')</button></div>';
+  if (bagTab === 'bag') {
+    const total = S.bag.reduce((a, b) => a + salePrice(b), 0);
+    const items = S.bag.map((it, i) => ({ it, i })).reverse().map(({ it, i }) => {
+      const f = fishById(it.fid);
+      return '<div class="item"><img class="th" alt="" src="' + spriteURL(it.fid) + '"><div class="grow"><b>' + esc(f ? f.name : 'Cá lạ') + '</b><div class="small muted">' + fmtKg(it.w) + (f ? ' · ' + RARITY[f.rar].name : '') + '</div></div><button class="btn" type="button" data-act="sell" data-id="' + i + '">Bán ' + fmt(salePrice(it)) + ' xu</button></div>';
+    }).join('');
+    $('v-bag').innerHTML = '<div class="panel">' + seg + '<div class="row sp" style="margin-bottom:10px"><h2>Túi cá</h2>' + (S.bag.length ? '<button class="btn ok" type="button" data-act="sellAll">Bán hết, nhận ' + fmt(total) + ' xu</button>' : '') + '</div>' +
+      (S.bag.length ? '<div class="list">' + items + '</div>' : '<p class="muted">Túi đang trống. Ra ao câu vài con rồi quay lại bán.</p>') + '</div>';
+  } else {
+    const secs = LAKES.map(L => {
+      const list = FISH.filter(f => f.lake === L.id), got = list.filter(f => S.journal[f.id] && S.journal[f.id].n).length;
+      const cards = list.map(f => {
+        const j = S.journal[f.id], k = j && j.n > 0;
+        return '<div class="card"><div class="row"><img class="th' + (k ? '' : ' silh') + '" alt="" src="' + spriteURL(f.id) + '"><div><b>' + (k ? esc(f.name) : '???') + '</b><div><span class="tag" style="color:' + RARITY[f.rar].col + '">' + RARITY[f.rar].name + '</span></div></div></div>' +
+          (k ? '<p class="small">' + esc(f.desc || '') + '</p><p class="small muted">Đã câu ' + j.n + ' con · nặng nhất ' + fmtKg(j.best) + '<br>Thích: ' + esc((f.likes || []).map(x => BAIT_KINDS[x]).join(', ')) + (f.when && f.when.t ? '<br>Hay cắn lúc: ' + esc(f.when.t.join(', ')) : '') + (f.when && f.when.w ? '<br>Thời tiết: ' + esc(f.when.w.join(', ')) : '') + '</p>' : '<p class="small muted">Chưa câu được. Thử đổi mồi, giờ và độ xa.</p>') + '</div>';
+      }).join('');
+      return '<div class="panel"><div class="row sp"><h2>' + esc(L.name) + '</h2><span class="chip">' + got + '/' + list.length + '</span></div><div class="grid" style="margin-top:10px">' + cards + '</div></div>';
+    }).join('');
+    $('v-bag').innerHTML = '<div class="stack">' + '<div class="panel">' + seg + '<p class="muted small">Loài nào chưa câu được chỉ hiện bóng đen. Câu được một lần là ghi vào sổ cùng gợi ý lần sau.</p></div>' + secs + '</div>';
+  }
+}
+function sellItem(i) { const it = S.bag[i]; if (!it) return; S.money += salePrice(it); S.stats.earned += salePrice(it); S.bag.splice(i, 1); saveSoon(); }
+
+/* ---------- kỹ năng ---------- */
+function renderSkills() {
+  const act = ACTIVE_SKILLS.map((k, i) => '<div class="card' + (S.level < k.lvl ? ' lockd' : '') + '"><div class="row sp"><h3>' + (i + 1) + '. ' + esc(k.name) + '</h3><span class="tag" style="color:' + (S.level < k.lvl ? 'var(--muted)' : 'var(--good)') + '">' + (S.level < k.lvl ? 'Mở ở cấp ' + k.lvl : 'Đã mở') + '</span></div><p class="small">' + esc(k.desc) + '</p><p class="small muted">Hồi chiêu ' + k.cd + ' giây.</p></div>').join('');
+  const pas = PASSIVES.map(p => {
+    const lv = S.pass[p.id] || 0;
+    return '<div class="card"><div class="row sp"><h3>' + esc(p.name) + '</h3><span class="chip">' + lv + '/' + p.max + '</span></div><p class="small muted">' + esc(p.per) + '</p><button class="btn pri" type="button" data-act="skillPlus" data-id="' + p.id + '"' + (S.sp < 1 || lv >= p.max ? ' disabled' : '') + '>' + (lv >= p.max ? 'Tối đa' : 'Nâng cấp (1 điểm)') + '</button></div>';
+  }).join('');
+  $('v-skills').innerHTML = '<div class="stack"><div class="panel"><div class="row sp"><h2>Cấp ' + S.level + '</h2><span class="chip">' + S.sp + ' điểm kỹ năng</span></div><div class="stat" style="grid-template-columns:90px 1fr;margin-top:8px"><span>' + fmt(S.xp) + '/' + fmt(xpNeed(S.level)) + ' XP</span><div class="bar xp"><i style="width:' + clamp(S.xp / xpNeed(S.level), 0.02, 1) * 100 + '%"></i></div></div><p class="muted small" style="margin-top:8px">Mỗi lần lên cấp nhận 1 điểm. Kỹ năng chủ động mở theo cấp, kỹ năng bị động nâng bằng điểm.</p></div>' +
+    '<div class="panel"><h2>Kỹ năng chủ động</h2><p class="muted small" style="margin:6px 0 12px">Bấm phím số hoặc nút ở màn Chơi.</p><div class="grid">' + act + '</div></div>' +
+    '<div class="panel"><h2>Kỹ năng bị động</h2><div class="grid" style="margin-top:10px">' + pas + '</div></div></div>';
+}
+
+/* ---------- bản đồ, nhiệm vụ ---------- */
+const LQ = { ao: { n: 6, sp: 4, big: 1.5 }, song: { n: 8, sp: 5, big: 5 }, ho: { n: 8, sp: 4, big: 12 }, bien: { n: 8, sp: 5, big: 30 }, hang: { n: 6, sp: 4, big: 60 } };
+function lakeStats(id) {
+  let n = 0, sp = 0, rare = 0, best = 0;
+  FISH.filter(f => f.lake === id).forEach(f => { const j = S.journal[f.id]; if (j && j.n) { n += j.n; sp++; if (f.rar >= 2) rare += j.n; if (j.best > best) best = j.best; } });
+  return { n, sp, rare, best };
+}
+function questsOf(id) {
+  const i = LAKES.findIndex(l => l.id === id), L = LAKES[i], q = LQ[id], s = lakeStats(id);
+  const money = Math.round(40 * Math.pow(3.2, i)), xp = Math.round(20 * Math.pow(2.2, i));
+  return [
+    { id: id + ':n', text: 'Câu ' + q.n + ' con cá ở ' + L.name, goal: q.n, cur: s.n, money, xp },
+    { id: id + ':sp', text: 'Ghi ' + q.sp + ' loài khác nhau vào sổ cá', goal: q.sp, cur: s.sp, money, xp },
+    { id: id + ':rare', text: 'Câu một con cá Hiếm trở lên', goal: 1, cur: s.rare, money: money * 2, xp: xp * 2 },
+    { id: id + ':big', text: 'Câu một con nặng từ ' + q.big + ' kg', goal: 1, cur: s.best >= q.big ? 1 : 0, money: money * 2, xp: xp * 2 }
+  ];
+}
+function unlockReqs(L) {
+  const r = [{ ok: S.level >= L.lvl, t: 'Đạt cấp ' + L.lvl }, { ok: S.money >= L.cost, t: 'Có ' + fmt(L.cost) + ' xu phí vào' }];
+  if (L.need) { const pl = LAKES.find(x => x.id === L.need.lake); r.push({ ok: lakeStats(L.need.lake).sp >= L.need.n, t: 'Ghi ' + L.need.n + ' loài ở ' + pl.name + ' (đang có ' + lakeStats(L.need.lake).sp + ')' }); }
+  return r;
+}
+function travel(id) {
+  if (id === S.lake) { showView('play'); return; }
+  S.lake = id; G.st = 'idle'; G.fight = null; G.bf = null; G.land = null; G.hold = false; G.fx = []; G.rx0 = null;
+  buildAmbient(); saveSoon(); showView('play');
+  if (!S.story.includes(id)) { S.story.push(id); showStory(LAKES.find(l => l.id === id).name, STORY[id], 'Bắt đầu câu'); }
+}
+function renderMap() {
+  const cards = LAKES.map((L, i) => {
+    const un = S.unlocked.includes(L.id), here = S.lake === L.id, req = unlockReqs(L), can = req.every(x => x.ok), recRod = RODS[L.recRod];
+    return '<div class="card' + (here ? ' on' : '') + (un ? '' : ' lockd') + '"><div class="row sp"><h3>' + esc(L.name) + '</h3>' + (here ? '<span class="tag" style="color:var(--teal)">Đang ở đây</span>' : '') + '</div>' +
+      '<p class="small">' + esc(L.desc) + '</p><p class="small muted">Cần gợi ý: ' + esc(recRod.name) + ' · ' + FISH.filter(f => f.lake === L.id).length + ' loài cá</p>' +
+      (un ? (here ? '' : '<button class="btn pri" type="button" data-act="travel" data-id="' + L.id + '">Đi tới đây</button>') :
+        '<ul class="gain">' + req.map(x => '<li style="color:' + (x.ok ? 'var(--good)' : 'var(--ink)') + '">' + (x.ok ? 'Đủ: ' : 'Chưa: ') + esc(x.t) + '</li>').join('') + '</ul><button class="btn pri" type="button" data-act="unlock" data-id="' + L.id + '"' + (can ? '' : ' disabled') + '>Mở khoá hồ</button>') + '</div>';
+  }).join('');
+  const qs = questsOf(S.lake).map(q => {
+    const done = q.cur >= q.goal, got = S.claimed[q.id];
+    return '<div class="item"><div class="grow"><b>' + esc(q.text) + '</b><div class="small muted">' + Math.min(q.cur, q.goal) + '/' + q.goal + ' · thưởng ' + fmt(q.money) + ' xu và ' + q.xp + ' XP</div></div>' +
+      (got ? '<span class="tag" style="color:var(--good)">Đã nhận</span>' : '<button class="btn ok" type="button" data-act="claim" data-id="' + q.id + '"' + (done ? '' : ' disabled') + '>Nhận thưởng</button>') + '</div>';
+  }).join('');
+  const book = ['intro'].concat(LAKES.map(l => l.id).filter(id => S.story.includes(id))).concat(S.ended ? ['end'] : []);
+  const pages = book.map(k => '<p class="story" style="margin-top:8px">' + esc(STORY[k]) + '</p>').join('');
+  $('v-map').innerHTML = '<div class="stack"><div class="panel"><h2>Bản đồ</h2><div class="grid" style="margin-top:10px">' + cards + '</div></div>' +
+    '<div class="panel"><h2>Nhiệm vụ ở ' + esc(lakeNow().name) + '</h2><div class="list" style="margin-top:10px">' + qs + '</div></div>' +
+    '<div class="panel"><h2>Sổ tay của ông</h2>' + pages + '</div>' +
+    '<div class="panel"><div class="row sp"><div><b>Chơi lại từ đầu</b><div class="small muted">Xoá tiền, cấp, túi cá, sổ cá. Ảnh cá ở tab Admin được giữ nguyên.</div></div><button class="btn" id="resetBtn" type="button" data-act="reset">Chơi lại</button></div></div></div>';
+}
+
+/* ---------- chuyển màn hình ---------- */
+function showView(v, fromHash) {
+  G.view = v; G.hold = false;
+  if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('tab')) document.activeElement.blur();
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  if (v === 'shop') renderShop(); else if (v === 'bag') renderBag(); else if (v === 'skills') renderSkills(); else if (v === 'map') renderMap(); else if (v === 'admin') renderAdmin();
+  if (!fromHash) { try { history.replaceState(null, '', '#' + SLUG[v]); } catch (e) { /* bỏ qua */ } }
+  window.scrollTo(0, 0);
+}
+function routeFromHash() { const h = (location.hash || '').replace('#', ''); showView(VIEW_OF[h] || 'play', true); }
+
+/* ---------- sự kiện ---------- */
+let resetArm = 0;
+function onAct(el) {
+  const a = el.dataset.act, id = el.dataset.id;
+  switch (a) {
+    case 'closeModal': closeModal(); break;
+    case 'closeCatch': closeCatch(); break;
+    case 'sellLast': sellItem(S.bag.length - 1); closeCatch(); break;
+    case 'buyRod': { const r = RODS.find(x => x.id === id); if (r && S.money >= r.price) { S.money -= r.price; S.rods.push(r.id); S.rod = r.id; saveSoon(); renderShop(); toast('Đã mua ' + r.name, 'good'); } break; }
+    case 'equipRod': S.rod = id; saveSoon(); renderShop(); break;
+    case 'buyBait': { const b = BAITS.find(x => x.id === id); if (b && S.money >= b.price * 10) { S.money -= b.price * 10; S.baits[id] = (S.baits[id] || 0) + 10; if (!(S.baits[S.bait] > 0)) S.bait = id; saveSoon(); renderShop(); } break; }
+    case 'equipBait': S.bait = id; saveSoon(); renderShop(); break;
+    case 'bagTab': bagTab = id; renderBag(); break;
+    case 'sell': sellItem(+id); renderBag(); break;
+    case 'sellAll': { S.bag.forEach(it => { const p = salePrice(it); S.money += p; S.stats.earned += p; }); S.bag = []; saveSoon(); renderBag(); break; }
+    case 'skillPlus': { const p = PASSIVES.find(x => x.id === id); if (p && S.sp > 0 && S.pass[id] < p.max) { S.sp--; S.pass[id]++; saveSoon(); renderSkills(); } break; }
+    case 'travel': travel(id); break;
+    case 'unlock': { const L = LAKES.find(x => x.id === id); if (L && unlockReqs(L).every(x => x.ok)) { S.money -= L.cost; S.unlocked.push(id); saveSoon(); travel(id); } break; }
+    case 'claim': {
+      const q = Object.values(LAKES).flatMap(l => questsOf(l.id)).find(x => x.id === id);
+      if (q && q.cur >= q.goal && !S.claimed[id]) {
+        S.claimed[id] = true; S.money += q.money; S.xp += q.xp;
+        while (S.xp >= xpNeed(S.level)) { S.xp -= xpNeed(S.level); S.level++; S.sp++; toast('Lên cấp ' + S.level + '!', 'good'); }
+        saveSoon(); renderMap();
+      }
+      break;
+    }
+    case 'reset':
+      if (resetArm) { const keep = S.intro; S = newSave(); S.intro = keep; saveNow(); buildAmbient(); G.st = 'idle'; G.fight = null; G.bf = null; resetArm = 0; renderMap(); toast('Đã bắt đầu lại.', 'good'); }
+      else { resetArm = 1; el.textContent = 'Bấm lần nữa để xoá'; setTimeout(() => { resetArm = 0; const b = $('resetBtn'); if (b) b.textContent = 'Chơi lại'; }, 3500); }
+      break;
+  }
+}
+function bindInput() {
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-act]'); if (t) { onAct(t); return; }
+    const tab = e.target.closest('.tab'); if (tab) { showView(tab.dataset.view); return; }
+    const sk = e.target.closest('[data-skill]'); if (sk) useSkill(sk.dataset.skill);
+  });
+  $('helpBtn').addEventListener('click', showHelp);
+  $('baitSel').addEventListener('change', e => { S.bait = e.target.value; saveSoon(); });
+  const stage = $('stage'), act = $('act');
+  const down = e => { if (e.button > 0) return; e.preventDefault(); pressDown(); };
+  stage.addEventListener('pointerdown', down); act.addEventListener('pointerdown', down);
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => { stage.addEventListener(ev, pressUp); act.addEventListener(ev, pressUp); });
+  window.addEventListener('pointerup', pressUp); window.addEventListener('blur', pressUp);
+  let spaceDown = false;
+  window.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') { if (!(e.code === 'Space' && G.view === 'play' && tag === 'BUTTON' && e.target.id === 'act')) return; }
+    if (G.view !== 'play') return;
+    if (e.code === 'Space') { e.preventDefault(); if (!spaceDown && !e.repeat) { spaceDown = true; pressDown(); } }
+    else if (e.key >= '1' && e.key <= '4') useSkill(ACTIVE_SKILLS[+e.key - 1].id);
+  });
+  window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; pressUp(); } });
+  window.addEventListener('hashchange', routeFromHash);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { saveNow(); pressUp(); } });
+}
+
+/* ===== ADMIN: tải ảnh cá thật, tách nền, pixel hoá, sửa thuộc tính loài ===== */
+const A = {
+  built: false, sel: null, draft: null, lakeFilter: 'all', src: null, sd: null, W: 0, H: 0, alphaMode: false, bgAuto: [255, 255, 255], bg: null,
+  mask: null, params: Object.assign({}, PIX_DEFAULT), res: null, tool: 'none', brush: 14, tok: 0, flip: false, animState: 'swim', t0: 0, raf: 0, tmr: {}, exportText: ''
+};
+
+function pipelineFull(work, params, bgOverride) {
+  const W = work.width, H = work.height, sd = work.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H);
+  const alphaMode = hasTransparency(sd.data, W, H), bgAuto = estimateBg(sd.data, W, H);
+  const mask = computeMask(sd, W, H, params, bgOverride || bgAuto, alphaMode);
+  const res = pixelize(makeCut(sd, W, H, mask), params);
+  return { sd, W, H, alphaMode, bgAuto, mask, res };
+}
+function computeMask(sd, W, H, p, bg, alphaMode) {
+  let fg;
+  if (p.bgMode === 'none') fg = new Uint8Array(W * H).fill(1);
+  else if (p.bgMode === 'auto' && alphaMode) fg = alphaMask(sd.data, W, H);
+  else fg = autoMask(sd.data, W, H, bg, p.tol);
+  return cleanMask(fg, W, H, p.erode);
+}
+function maskToPng(mask, W, H) {
+  const c = mkCanvas(W, H), x = c.getContext('2d'), id = x.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) { id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = mask[i] ? 255 : 0; }
+  x.putImageData(id, 0, 0); return c.toDataURL('image/png');
+}
+async function pngToMask(url, W, H) {
+  const im = await dataUrlToImage(url), c = mkCanvas(W, H), x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(im, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, m = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) m[i] = d[i * 4 + 3] > 127 ? 1 : 0; return m;
+}
+const DRAFT_NEW = lake => ({ id: 'c_' + Date.now().toString(36), name: 'Loài mới', lake, rar: 0, wmin: 0.1, wmax: 1, price: 20, pow: 1, pat: 'steady', zone: 'm', likes: ['worm'], when: null, col: '#7a8a96', len: 56, desc: '', custom: true, isNew: true });
+
+/* ---------- khung trang ---------- */
+function renderAdmin() {
+  const root = $('v-admin');
+  if (!A.built) {
+    A.built = true;
+    root.innerHTML = '<div class="stack"><div class="panel" id="admTop"></div><div class="adm"><div class="panel" id="admList"></div><div id="admEdit" class="stack"></div></div></div>';
+    root.addEventListener('click', onAdminClick);
+    root.addEventListener('change', onAdminChange);
+    root.addEventListener('input', onAdminInput);
+    root.addEventListener('dragover', e => { const d = e.target.closest('.drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
+    root.addEventListener('dragleave', e => { const d = e.target.closest('.drop'); if (d) d.classList.remove('over'); });
+    root.addEventListener('drop', e => { const d = e.target.closest('.drop'); if (d) { e.preventDefault(); d.classList.remove('over'); const fs = [...e.dataTransfer.files].filter(f => /^image\//.test(f.type)); if (fs.length) handleFiles(fs, d.dataset.bulk === '1'); } });
+    window.addEventListener('paste', e => { if (G.view !== 'admin') return; const it = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => /^image\//.test(i.type)); if (it) { const f = it.getAsFile(); if (f) handleFiles([f], false); } });
+  }
+  if (!A.sel && FISH.length) { const first = FISH.find(f => f.id === 'chep') || FISH[0]; selectFish(first.id); }
+  refreshTop(); refreshList();
+  if (A.sel && !$('eTitle')) refreshEditor();
+  startAnim();
+}
+function refreshTop() {
+  const have = FISH.filter(f => !SPR[f.id] || !SPR[f.id].ph).length;
+  $('admTop').innerHTML = '<div class="row sp"><div><h2>Quản lý cá</h2><p class="muted small">' + have + '/' + FISH.length + ' loài đã có ảnh thật. Ảnh tải lên được tách nền và pixel hoá ngay trên trình duyệt, rồi hiện trong game.</p></div>' +
+    '<div class="row"><button class="btn" type="button" data-a="export">Xuất gói cá</button><button class="btn" type="button" data-a="exportFull">Xuất kèm ảnh gốc</button><button class="btn" type="button" data-a="import">Nhập gói cá</button></div></div>' +
+    (DB.ok ? '' : '<div class="note warn" style="margin-top:10px">Trình duyệt này không cho lưu dữ liệu. Ảnh sẽ mất khi tải lại trang, hãy dùng Xuất gói cá để giữ.</div>') +
+    '<div id="expArea" style="margin-top:10px"></div><input type="file" id="importFile" accept=".json,application/json" hidden>';
+}
+function refreshList() {
+  const lf = A.lakeFilter, items = FISH.filter(f => lf === 'all' || f.lake === lf);
+  $('admList').innerHTML = '<div class="row sp" style="margin-bottom:8px"><h3>Loài cá</h3><button class="btn pri" type="button" data-a="new">+ Thêm loài</button></div>' +
+    '<label class="small muted">Hồ <select id="lakeFilter" style="width:100%;padding:6px 8px;background:var(--panel);border:2px solid var(--line)"><option value="all">Tất cả hồ</option>' + LAKES.map(l => '<option value="' + l.id + '"' + (lf === l.id ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('') + '</select></label>' +
+    '<div class="drop" style="margin:10px 0;padding:12px" tabindex="0" role="button" data-a="bulk" data-bulk="1"><b style="font-size:20px">Tải nhiều ảnh cùng lúc</b><span class="small muted">Mỗi ảnh thành một loài mới, đặt tên theo tên file</span></div><input type="file" id="bulkFile" accept="image/*" multiple hidden>' +
+    '<div class="flist">' + items.map(f => {
+      const ph = !SPR[f.id] || SPR[f.id].ph;
+      return '<button type="button" class="frow' + (A.sel === f.id ? ' on' : '') + '" data-a="pick" data-id="' + esc(f.id) + '"><img class="th" alt="" src="' + spriteURL(f.id) + '"><span class="nm"><b>' + esc(f.name) + '</b><span class="small muted">' + esc((LAKES.find(l => l.id === f.lake) || {}).name || '') + ' · ' + (ph ? 'chưa có ảnh' : 'có ảnh') + '</span></span></button>';
+    }).join('') + '</div>';
+}
+
+/* ---------- chọn loài, dựng bảng sửa ---------- */
+async function selectFish(id, draft) {
+  const tok = ++A.tok;
+  A.sel = id; A.src = null; A.res = null; A.mask = null; A.bg = null; A.tool = 'none'; A.params = Object.assign({}, PIX_DEFAULT);
+  const f = draft || fishById(id); if (!f) return;
+  A.draft = JSON.parse(JSON.stringify(Object.assign({}, f, { rec: undefined })));
+  if (f.rec && f.rec.src) {
+    try {
+      const im = await dataUrlToImage(f.rec.src); if (tok !== A.tok) return;
+      const c = mkCanvas(im.width, im.height); c.getContext('2d').drawImage(im, 0, 0);
+      A.src = c; A.W = c.width; A.H = c.height; A.sd = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, A.W, A.H);
+      A.alphaMode = hasTransparency(A.sd.data, A.W, A.H); A.bgAuto = estimateBg(A.sd.data, A.W, A.H);
+      A.params = Object.assign({}, PIX_DEFAULT, f.rec.params || {}); A.bg = f.rec.bg || null;
+      A.mask = f.rec.mask ? await pngToMask(f.rec.mask, A.W, A.H) : computeMask(A.sd, A.W, A.H, A.params, A.bg || A.bgAuto, A.alphaMode);
+      if (tok !== A.tok) return;
+      A.res = pixelize(makeCut(A.sd, A.W, A.H, A.mask), A.params);
+    } catch (e) { A.src = null; }
+  }
+  refreshList(); refreshEditor();
+}
+function checks(cls, opts, sel) { return opts.map(o => '<label><input type="checkbox" class="' + cls + '" value="' + esc(o[0]) + '"' + (sel.includes(o[0]) ? ' checked' : '') + '>' + esc(o[1]) + '</label>').join(''); }
+function refreshEditor() {
+  const d = A.draft, box = $('admEdit'); if (!d) { box.innerHTML = '<div class="panel muted">Chọn một loài ở bên trái.</div>'; return; }
+  const p = A.params, isDef = !d.custom, hasRec = !!(fishById(d.id) && fishById(d.id).rec);
+  const sl = (k, lbl, min, max, step) => '<label><span>' + lbl + '<b id="v_' + k + '">' + p[k] + '</b></span><input type="range" data-p="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + p[k] + '"></label>';
+  const opt = (arr, cur) => arr.map(o => '<option value="' + o[0] + '"' + (String(cur) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('');
+  box.innerHTML =
+    '<div class="panel"><div class="row sp"><h2 id="eTitle">' + esc(d.name) + '</h2><div class="row"><button class="btn ok" type="button" data-a="save">Lưu loài này</button>' +
+    (d.isNew ? '' : '<button class="btn" type="button" data-a="remove" id="rmBtn">' + (isDef ? 'Khôi phục mặc định' : 'Xoá loài') + '</button>') + '</div></div><div id="eMsg" class="note" hidden style="margin-top:10px"></div></div>' +
+    '<div class="panel"><h3>1. Ảnh cá thật</h3><p class="muted small" style="margin:4px 0 10px">Ảnh chụp nghiêng, thấy rõ đầu và đuôi, nền đơn giản (trắng, một màu hoặc đã xoá nền). Ảnh nền phức tạp thì dùng cọ xoá và cọ khôi phục để chỉnh.</p>' +
+    '<div class="drop" id="drop" tabindex="0" role="button" data-a="choose"><b>Kéo ảnh cá vào đây</b><span class="small muted">hoặc bấm để chọn file, hoặc dán ảnh bằng Ctrl+V</span></div><input type="file" id="oneFile" accept="image/*" hidden>' +
+    '<div id="pipe"' + (A.src ? '' : ' hidden') + ' style="margin-top:12px;display:grid;gap:12px">' +
+    '<div class="sliders"><label><span>Cách tách nền</span><select data-p="bgMode"><option value="auto"' + (p.bgMode === 'auto' ? ' selected' : '') + '>Tự động</option><option value="color"' + (p.bgMode === 'color' ? ' selected' : '') + '>Theo màu nền</option><option value="none"' + (p.bgMode === 'none' ? ' selected' : '') + '>Giữ nguyên ảnh</option></select></label>' +
+    sl('tol', 'Ngưỡng tách nền', 6, 120, 1) + sl('erode', 'Co viền để bỏ quầng nền', 0, 8, 1) + '</div>' +
+    '<div class="row"><button class="btn" type="button" data-a="tool" data-t="pick">Chọn màu nền</button><button class="btn" type="button" data-a="tool" data-t="erase">Cọ xoá</button><button class="btn" type="button" data-a="tool" data-t="restore">Cọ khôi phục</button><button class="btn ghost" type="button" data-a="tool" data-t="none">Tắt cọ</button>' +
+    '<label class="small muted row">Cỡ cọ <input type="range" data-brush="1" min="3" max="40" value="' + A.brush + '"></label><span class="small muted">Màu nền: <span class="swatch" id="bgSw"></span></span></div>' +
+    '<div class="sliders"><label><span>Bề rộng sprite (px)</span><select data-p="width">' + opt([32, 40, 48, 56, 64, 72, 80, 96, 112, 128].map(n => [n, n + ' px']), p.width) + '</select></label>' +
+    sl('colors', 'Số màu', 4, 32, 1) + sl('sat', 'Độ đậm màu', 0.6, 1.8, 0.05) + sl('con', 'Tương phản', 0.8, 1.4, 0.05) + sl('dither', 'Chấm rỗ (dither)', 0, 1, 0.1) +
+    '<label><span>Đầu cá trong ảnh gốc quay về</span><select data-p="head"><option value="auto"' + (p.head === 'auto' ? ' selected' : '') + '>Tự đoán</option><option value="left"' + (p.head === 'left' ? ' selected' : '') + '>Bên trái</option><option value="right"' + (p.head === 'right' ? ' selected' : '') + '>Bên phải</option></select></label>' +
+    '<label style="display:flex;gap:6px;align-items:center;color:var(--ink);font-size:13px"><input type="checkbox" data-p="outline"' + (p.outline ? ' checked' : '') + '> Viền tối quanh cá</label></div>' +
+    '<div class="prev"><div class="pv"><small>Ảnh gốc (bấm để chọn màu nền khi bật chế độ chọn)</small><div class="cvw"><canvas id="srcCv"></canvas></div></div><div class="pv"><small>Đã tách nền (tô để xoá hoặc khôi phục)</small><div class="cvw"><canvas id="cutCv"></canvas></div></div><div class="pv"><small id="sprInfo">Cá pixel</small><div class="cvw"><canvas id="sprCv" class="crisp"></canvas></div></div></div></div>' +
+    '<div id="curWrap"' + (A.src ? ' hidden' : '') + ' class="row" style="margin-top:12px"><img class="th" id="curImg" style="height:72px;max-width:160px" alt="" src="' + spriteURL(d.id) + '"><span class="small muted">' + ((SPR[d.id] && SPR[d.id].ph) ? 'Đây là cá mẫu tạm. Tải ảnh cá thật lên để thay.' : 'Ảnh đang dùng trong game. Tải ảnh mới để thay.') + '</span></div></div>' +
+    '<div class="panel"><h3>2. Xem thử chuyển động</h3><div class="row" style="margin:8px 0"><button class="btn" type="button" data-a="anim" data-s="swim">Bơi</button><button class="btn" type="button" data-a="anim" data-s="bite">Cắn câu</button><button class="btn" type="button" data-a="anim" data-s="struggle">Giãy mạnh</button><button class="btn ghost" type="button" data-a="anim" data-s="flip">Đổi hướng</button></div><div class="cvw" style="display:grid;place-items:center;background:#2a6a78;border:2px solid var(--ink);padding:0"><canvas id="animCv" width="320" height="150" style="width:100%;max-width:640px;image-rendering:pixelated"></canvas></div><p class="small muted" style="margin-top:6px">Cá được cắt thành từng cột pixel rồi uốn theo sóng, giống hệt trong game. Đuôi lắc mạnh hơn đầu.</p></div>' +
+    '<div class="panel"><h3>3. Thuộc tính loài</h3><div class="form" style="margin-top:10px">' +
+    '<label class="wide">Tên loài<input type="text" id="f_name" value="' + esc(d.name) + '"></label>' +
+    '<label>Sống ở hồ<select id="f_lake">' + opt(LAKES.map(l => [l.id, l.name]), d.lake) + '</select></label>' +
+    '<label>Độ hiếm<select id="f_rar">' + opt(RARITY.map((r, i) => [i, r.name]), d.rar) + '</select></label>' +
+    '<label>Nặng tối thiểu (kg)<input type="number" id="f_wmin" min="0.01" step="0.01" value="' + d.wmin + '"></label>' +
+    '<label>Nặng tối đa (kg)<input type="number" id="f_wmax" min="0.01" step="0.01" value="' + d.wmax + '"></label>' +
+    '<label>Giá ở cân trung bình (xu)<input type="number" id="f_price" min="1" step="1" value="' + d.price + '"></label>' +
+    '<label>Sức kéo (so với cần câu)<input type="number" id="f_pow" min="0.1" max="12" step="0.1" value="' + d.pow + '"></label>' +
+    '<label>Kiểu giật<select id="f_pat">' + opt(Object.keys(PATTERNS).map(k => [k, PATTERNS[k].name]), d.pat) + '</select></label>' +
+    '<label>Vùng nước<select id="f_zone">' + opt([['s', 'Gần bờ'], ['m', 'Giữa hồ'], ['d', 'Xa và sâu']], d.zone) + '</select></label>' +
+    '<label class="wide">Mồi ưa thích<span class="checks">' + checks('lk', Object.keys(BAIT_KINDS).map(k => [k, BAIT_KINDS[k]]), d.likes || []) + '</span></label>' +
+    '<label class="wide">Hay cắn lúc (bỏ trống là lúc nào cũng được)<span class="checks">' + checks('tm', TIMES.map(t => [t, t]), (d.when && d.when.t) || []) + '</span></label>' +
+    '<label class="wide">Thời tiết ưa thích (bỏ trống là mọi thời tiết)<span class="checks">' + checks('wx', WEATHERS.map(t => [t, t]), (d.when && d.when.w) || []) + '</span></label>' +
+    '<label class="wide">Mô tả trong sổ cá<textarea id="f_desc" rows="3">' + esc(d.desc) + '</textarea></label></div></div>';
+  if (A.src) { drawSrc(); drawCut(); drawSpr(); }
+  setSwatch();
+}
+
+/* ---------- xử lý ảnh trong trang ---------- */
+async function handleFiles(files, bulk) {
+  if (bulk || files.length > 1) return bulkUpload(files);
+  try {
+    const im = await fileToImage(files[0]), work = imageToWork(im, 420);
+    if (!A.draft) return;
+    A.src = work; A.W = work.width; A.H = work.height; A.bg = null;
+    const r = pipelineFull(work, A.params, null);
+    A.sd = r.sd; A.alphaMode = r.alphaMode; A.bgAuto = r.bgAuto; A.mask = r.mask; A.res = r.res;
+    if (A.draft.isNew && /^Loài mới$/.test(A.draft.name)) { const nm = nameFromFile(files[0].name); if (nm) A.draft.name = nm; }
+    refreshEditor(); showMsg(A.res ? 'Đã xử lý ảnh. Chỉnh thanh trượt nếu chưa ưng, rồi bấm Lưu loài này.' : 'Không còn gì sau khi tách nền. Giảm ngưỡng tách nền hoặc chọn Giữ nguyên ảnh.', A.res ? '' : 'warn');
+  } catch (e) { showMsg(e.message || 'Không đọc được ảnh', 'warn'); }
+}
+function nameFromFile(n) { n = n.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim(); return n ? n.charAt(0).toUpperCase() + n.slice(1) : ''; }
+async function bulkUpload(files) {
+  const lake = A.lakeFilter !== 'all' ? A.lakeFilter : S.lake; let ok = 0, bad = 0;
+  for (const f of files) {
+    try {
+      const work = imageToWork(await fileToImage(f), 420), p = Object.assign({}, PIX_DEFAULT), r = pipelineFull(work, p, null);
+      if (!r.res) { bad++; continue; }
+      const d = DRAFT_NEW(lake); d.id += '_' + ok; d.name = nameFromFile(f.name) || 'Loài mới'; d.len = r.res.canvas.width; delete d.isNew;
+      const rec = recFromDraft(d); rec.sprite = r.res.canvas.toDataURL('image/png'); rec.mouthY = r.res.mouthY;
+      work.getContext('2d'); rec.src = work.toDataURL('image/jpeg', 0.86); rec.mask = maskToPng(r.mask, r.W, r.H); rec.params = p; rec.bg = null;
+      await DB.put(rec); ok++;
+    } catch (e) { bad++; }
+  }
+  await rebuildFish(); refreshTop(); refreshList();
+  showMsg('Đã thêm ' + ok + ' loài mới' + (bad ? ', ' + bad + ' ảnh không đọc được' : '') + '. Bấm vào từng loài để chỉnh tên và thuộc tính.', bad ? 'warn' : '');
+}
+function recompute(maskToo) {
+  if (!A.src) return;
+  if (maskToo) A.mask = computeMask(A.sd, A.W, A.H, A.params, A.bg || A.bgAuto, A.alphaMode);
+  A.res = pixelize(makeCut(A.sd, A.W, A.H, A.mask), A.params);
+  drawCut(); drawSpr(); setSwatch();
+}
+function later(key, fn, ms) { clearTimeout(A.tmr[key]); A.tmr[key] = setTimeout(fn, ms); }
+function drawSrc() { const c = $('srcCv'); if (!c || !A.src) return; c.width = A.W; c.height = A.H; c.getContext('2d').drawImage(A.src, 0, 0); c.className = A.tool === 'pick' ? 'pick' : ''; }
+function drawCut() {
+  const c = $('cutCv'); if (!c || !A.src) return; c.width = A.W; c.height = A.H;
+  const x = c.getContext('2d'), id = x.createImageData(A.W, A.H), s = A.sd.data;
+  for (let i = 0; i < A.W * A.H; i++) { id.data[i * 4] = s[i * 4]; id.data[i * 4 + 1] = s[i * 4 + 1]; id.data[i * 4 + 2] = s[i * 4 + 2]; id.data[i * 4 + 3] = A.mask[i] ? 255 : 0; }
+  x.putImageData(id, 0, 0); c.className = (A.tool === 'erase' || A.tool === 'restore') ? 'brush' : '';
+}
+function drawSpr() {
+  const c = $('sprCv'), info = $('sprInfo'); if (!c) return;
+  if (!A.res) { c.width = 8; c.height = 8; if (info) info.textContent = 'Không còn gì sau khi tách nền'; return; }
+  const r = A.res.canvas; c.width = r.width; c.height = r.height; c.getContext('2d').drawImage(r, 0, 0);
+  const k = Math.max(1, Math.min(8, Math.floor(260 / r.width))); c.style.width = r.width * k + 'px';
+  if (info) info.textContent = 'Cá pixel ' + r.width + 'x' + r.height + ' px, ' + A.res.palette.length + ' màu' + (A.res.headWasLeft ? ', đã lật cho đầu quay phải' : '');
+}
+function setSwatch() { const s = $('bgSw'); if (s) { const c = A.bg || A.bgAuto; s.style.background = rgbStr(c); s.title = A.bg ? 'Màu bạn chọn' : 'Màu tự đoán từ viền ảnh'; } }
+function showMsg(t, kind) { const m = $('eMsg'); if (!m) return; m.hidden = !t; m.textContent = t || ''; m.className = 'note' + (kind ? ' ' + kind : ''); }
+
+/* ---------- lưu ---------- */
+function readForm() {
+  const d = A.draft; if (!d || !$('f_name')) return;
+  d.name = $('f_name').value.trim() || 'Loài mới'; d.lake = $('f_lake').value; d.rar = +$('f_rar').value;
+  d.wmin = Math.max(0.01, +$('f_wmin').value || 0.1); d.wmax = Math.max(d.wmin, +$('f_wmax').value || 1);
+  d.price = Math.max(1, +$('f_price').value || 1); d.pow = clamp(+$('f_pow').value || 1, 0.1, 12);
+  d.pat = $('f_pat').value; d.zone = $('f_zone').value; d.desc = $('f_desc').value.trim();
+  const get = cls => [...document.querySelectorAll('#v-admin .' + cls + ':checked')].map(i => i.value);
+  d.likes = get('lk'); const t = get('tm'), w = get('wx'); d.when = (t.length || w.length) ? { t: t.length ? t : undefined, w: w.length ? w : undefined } : null;
+  if (d.when) { if (!d.when.t) delete d.when.t; if (!d.when.w) delete d.when.w; }
+}
+function recFromDraft(d) {
+  return { id: d.id, name: d.name, lake: d.lake, rar: d.rar, wmin: d.wmin, wmax: d.wmax, price: d.price, pow: d.pow, pat: d.pat, zone: d.zone, likes: d.likes, when: d.when, col: d.col || '#7a8a96', len: d.len || 56, desc: d.desc };
+}
+async function saveFish() {
+  readForm(); const d = A.draft; if (!d) return;
+  const rec = recFromDraft(d), old = fishById(d.id) && fishById(d.id).rec;
+  if (A.res && A.src) {
+    rec.sprite = A.res.canvas.toDataURL('image/png'); rec.mouthY = A.res.mouthY; rec.len = A.res.canvas.width;
+    rec.src = A.src.toDataURL('image/jpeg', 0.86); rec.mask = maskToPng(A.mask, A.W, A.H); rec.params = Object.assign({}, A.params); rec.bg = A.bg;
+  } else if (old) { ['sprite', 'mouthY', 'src', 'mask', 'params', 'bg'].forEach(k => { if (old[k] !== undefined) rec[k] = old[k]; }); }
+  const ok = await DB.put(rec);
+  delete d.isNew; await rebuildFish(); refreshTop(); refreshList();
+  const t = $('eTitle'); if (t) t.textContent = d.name;
+  buildAmbient(); saveSoon();
+  showMsg(ok ? 'Đã lưu. Cá này sẽ xuất hiện trong game ở ' + (LAKES.find(l => l.id === d.lake) || {}).name + '.' : 'Đã áp dụng nhưng trình duyệt không lưu được, hãy dùng Xuất gói cá.', ok ? '' : 'warn');
+  const th = $('curImg'); if (th) th.src = spriteURL(d.id);
+}
+let removeArm = 0;
+async function removeFish(btn) {
+  if (!removeArm) { removeArm = 1; btn.textContent = 'Bấm lần nữa để xác nhận'; setTimeout(() => { removeArm = 0; const b = $('rmBtn'); if (b) b.textContent = A.draft && !A.draft.custom ? 'Khôi phục mặc định' : 'Xoá loài'; }, 3500); return; }
+  removeArm = 0; const id = A.sel; await DB.del(id); await rebuildFish(); buildAmbient();
+  A.sel = null; A.draft = null; const next = fishById(id) || FISH[0]; refreshTop(); selectFish(next ? next.id : null);
+}
+
+/* ---------- xuất, nhập ---------- */
+async function doExport(full) {
+  const recs = (await DB.all()).map(r => { const o = Object.assign({}, r); if (!full) { delete o.src; delete o.mask; } return o; });
+  const text = JSON.stringify({ app: 'caucapixel', v: 1, fish: recs });
+  let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+  const area = $('expArea');
+  if (dl) { try { await dl.save({ filename: 'goi-ca-pixel.json', data: text }); area.innerHTML = '<div class="note">Đã gửi yêu cầu lưu file goi-ca-pixel.json (' + recs.length + ' loài đã chỉnh).</div>'; return; } catch (e) { /* rơi xuống sao chép */ } }
+  A.exportText = text;
+  area.innerHTML = '<div class="note">Gói gồm ' + recs.length + ' loài đã chỉnh. Sao chép đoạn này, dán vào file .json để giữ, rồi dùng Nhập gói cá để nạp lại.</div><textarea class="exp" id="expText" readonly></textarea><div class="row" style="margin-top:6px"><button class="btn" type="button" data-a="copyExp">Sao chép</button></div>';
+  $('expText').value = text;
+}
+async function doImportText(text) {
+  try {
+    const o = JSON.parse(text); if (!o || !Array.isArray(o.fish)) throw new Error('bad');
+    let n = 0; for (const r of o.fish) { if (r && r.id && r.name) { await DB.put(r); n++; } }
+    await rebuildFish(); buildAmbient(); refreshTop(); refreshList(); A.sel = null; A.draft = null; selectFish((FISH[0] || {}).id);
+    $('expArea').innerHTML = '<div class="note">Đã nhập ' + n + ' loài.</div>';
+  } catch (e) { $('expArea').innerHTML = '<div class="note warn">File này không phải gói cá hợp lệ.</div>'; }
+}
+
+/* ---------- sự kiện ---------- */
+function onAdminClick(e) {
+  const t = e.target.closest('[data-a]'); if (!t) return;
+  const a = t.dataset.a;
+  if (a === 'pick') { readForm(); selectFish(t.dataset.id); }
+  else if (a === 'new') { readForm(); const d = DRAFT_NEW(A.lakeFilter !== 'all' ? A.lakeFilter : S.lake); selectFish(d.id, d); }
+  else if (a === 'choose') $('oneFile').click();
+  else if (a === 'bulk') $('bulkFile').click();
+  else if (a === 'save') saveFish();
+  else if (a === 'remove') removeFish(t);
+  else if (a === 'tool') { A.tool = t.dataset.t; drawSrc(); drawCut(); }
+  else if (a === 'anim') { if (t.dataset.s === 'flip') A.flip = !A.flip; else { A.animState = t.dataset.s; A.t0 = performance.now(); } }
+  else if (a === 'export') doExport(false);
+  else if (a === 'exportFull') doExport(true);
+  else if (a === 'import') $('importFile').click();
+  else if (a === 'copyExp') { const ta = $('expText'); ta.select(); let ok = false; try { navigator.clipboard.writeText(A.exportText).then(() => toast('Đã sao chép', 'good'), () => { document.execCommand && document.execCommand('copy'); }); ok = true; } catch (er) { /* chọn thủ công */ } if (!ok) { try { document.execCommand('copy'); } catch (er) { /* bỏ */ } } }
+}
+function onAdminChange(e) {
+  const t = e.target;
+  if (t.id === 'lakeFilter') { A.lakeFilter = t.value; refreshList(); return; }
+  if (t.id === 'oneFile' && t.files && t.files[0]) { handleFiles([t.files[0]], false); t.value = ''; return; }
+  if (t.id === 'bulkFile' && t.files && t.files.length) { bulkUpload([...t.files]); t.value = ''; return; }
+  if (t.id === 'importFile' && t.files && t.files[0]) { const r = new FileReader(); r.onload = () => doImportText(String(r.result)); r.readAsText(t.files[0]); t.value = ''; return; }
+  if (t.dataset && t.dataset.p) setParam(t);
+}
+function onAdminInput(e) {
+  const t = e.target;
+  if (t.dataset && t.dataset.p && t.type === 'range') setParam(t);
+  else if (t.dataset && t.dataset.brush) A.brush = +t.value;
+  else if (t.id === 'f_name') { const h = $('eTitle'); if (h) h.textContent = t.value || 'Loài mới'; }
+}
+function setParam(t) {
+  const k = t.dataset.p; let v = t.type === 'checkbox' ? t.checked : t.type === 'range' ? +t.value : (t.tagName === 'SELECT' && k === 'width' ? +t.value : t.value);
+  A.params[k] = v; const lbl = $('v_' + k); if (lbl) lbl.textContent = v;
+  if (!A.src) return;
+  if (k === 'tol' || k === 'erode' || k === 'bgMode') later('m', () => recompute(true), 120); else later('s', () => recompute(false), 60);
+}
+/* cọ tô và chọn màu nền */
+(function () {
+  let painting = false;
+  const pos = (cv, e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+  const paint = e => {
+    const cv = $('cutCv'); if (!cv || !A.mask) return; const p = pos(cv, e), r = A.brush, v = A.tool === 'restore' ? 1 : 0;
+    for (let y = Math.max(0, Math.floor(p.y - r)); y <= Math.min(A.H - 1, Math.ceil(p.y + r)); y++) for (let x = Math.max(0, Math.floor(p.x - r)); x <= Math.min(A.W - 1, Math.ceil(p.x + r)); x++) if ((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) <= r * r) A.mask[y * A.W + x] = v;
+    drawCut();
+  };
+  document.addEventListener('pointerdown', e => {
+    if (e.target.id === 'cutCv' && (A.tool === 'erase' || A.tool === 'restore')) { painting = true; e.target.setPointerCapture(e.pointerId); paint(e); e.preventDefault(); }
+    else if (e.target.id === 'srcCv' && A.tool === 'pick') { const p = pos(e.target, e), i = (Math.min(A.H - 1, Math.floor(p.y)) * A.W + Math.min(A.W - 1, Math.floor(p.x))) * 4; A.bg = [A.sd.data[i], A.sd.data[i + 1], A.sd.data[i + 2]]; A.params.bgMode = 'color'; A.tool = 'none'; const s = document.querySelector('[data-p="bgMode"]'); if (s) s.value = 'color'; recompute(true); drawSrc(); }
+  });
+  document.addEventListener('pointermove', e => { if (painting) paint(e); });
+  const end = () => { if (painting) { painting = false; recompute(false); } };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+})();
+
+/* ---------- xem thử chuyển động ---------- */
+function curSprite() {
+  const d = A.draft; if (!d) return null;
+  if (A.res) return { canvas: A.res.canvas };
+  return SPR[d.id] ? { canvas: SPR[d.id].canvas } : null;
+}
+function startAnim() {
+  if (A.raf) return;
+  const loop = ts => {
+    A.raf = requestAnimationFrame(loop);
+    if (G.view !== 'admin') return;
+    const c = $('animCv'); if (!c) return;
+    const s = curSprite(); const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+    for (let y = 0; y < 150; y += 5) { x.fillStyle = rgbStr(mixRgb([60, 150, 150], [20, 70, 100], y / 150)); x.fillRect(0, y, 320, 5); }
+    x.fillStyle = 'rgba(255,255,255,.4)'; x.fillRect(0, 10, 320, 1);
+    if (!s) return;
+    const t = ts / 1000, W = s.canvas.width, st = A.animState; let cx = 160, cy = 80, o;
+    const dir = A.flip ? -1 : 1;
+    if (st === 'swim') { cx = 160 + Math.sin(t * 0.8) * 70; const mv = Math.cos(t * 0.8) * dir > 0; o = { flip: A.flip ? !mv : mv ? false : true, amp: 2.5, phase: t * 7, freq: 1.0 }; o.flip = Math.cos(t * 0.8) < 0; if (A.flip) o.flip = !o.flip; cy = 75 + Math.sin(t * 1.3) * 8; }
+    else if (st === 'bite') { const k = ((ts - A.t0) / 1000) % 2.2; const lunge = k < 0.35 ? k / 0.35 : k < 0.7 ? 1 - (k - 0.35) / 0.35 * 1.2 : 0; cx = 190 - lunge * 40 * dir; cy = 80; o = { flip: !A.flip, amp: 2 + lunge * 4, phase: t * 10, freq: 1.0 }; x.fillStyle = '#e04a3a'; x.fillRect(120, 10, 3, 6); x.fillStyle = '#fff'; x.fillRect(120, 16, 3, 5); x.fillStyle = '#e9f1f2'; x.fillRect(121, 21, 1, 54); }
+    else { cx = 160 + Math.sin(t * 9) * 5; cy = 80 + Math.sin(t * 6) * 4; o = { flip: !A.flip, amp: 7, phase: t * 20, tilt: Math.sin(t * 13) * 0.28, freq: 1.0 }; }
+    drawFishWavy(x, s.canvas, cx, cy, o);
+  };
+  A.raf = requestAnimationFrame(loop);
+}
+
+/* ===== KHỞI ĐỘNG ===== */
+async function boot() {
+  loadSave();
+  await DB.open();
+  await rebuildFish();
+  initWorld(); bindInput(); buildSkillBar();
+  routeFromHash();
+  requestAnimationFrame(frame);
+  if (!S.intro) { S.intro = true; S.story.includes('ao') || S.story.push('ao'); saveSoon(); openModal('<h2>Ông để lại gì?</h2><p class="story">' + esc(STORY.intro) + '</p><p class="story muted small">' + esc(STORY.ao) + '</p><div class="mbtns"><button class="btn" type="button" data-act="help">Cách chơi</button><button class="btn pri" type="button" data-act="closeModal">Ra ao thôi</button></div>'); }
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-act="help"]'); if (t) { closeModal(); showHelp(); } });
+window.__fishgame = { G, get S() { return S; }, FISH: () => FISH, SPR, pickFish, setHook, landFish, startFight: setHook, useSkill, travel, showView, saveNow };
+boot().catch(err => { console.error(err); const m = document.createElement('p'); m.className = 'panel'; m.textContent = 'Không khởi động được: ' + err.message; document.body.appendChild(m); });
+
+})();
+</script>
