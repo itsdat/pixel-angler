@@ -1,8 +1,14 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Câu Cá Pixel</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=VT323&display=swap">
 <style>
+[hidden] { display: none !important; }
 /* Bố cục: thanh tab trên cùng, khung chơi 16:9 ở giữa, bảng điều khiển bên dưới. Tông màu: gỗ ván cầu và nước ao. */
 :root {
   --bg: #e7eee6; --panel: #fbf8ee; --panel2: #efe9d6; --ink: #1b2a33; --muted: #5a6b72; --line: #c8cdb6;
@@ -155,6 +161,8 @@ kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border:
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
+</head>
+<body>
 
 <div class="app" id="app">
   <header class="top">
@@ -2122,3 +2130,6 @@ boot().catch(err => { console.error(err); const m = document.createElement('p');
 
 })();
 </script>
+
+</body>
+</html>
