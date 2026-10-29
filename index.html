@@ -65,6 +65,13 @@ p { margin: 0; }
 .tmark { position: absolute; top: -4px; bottom: -4px; width: 5px; margin-left: -2px; background: #fff; box-shadow: 0 0 0 1px #000; }
 .pbar { height: 8px; margin-top: 4px; background: rgba(8, 16, 24, .82); border: 2px solid #f1f6f4; }
 .pfill { height: 100%; width: 0; background: #ffd23f; }
+.fphase { text-align: center; font-family: var(--font-display); font-size: 20px; line-height: 1; margin-bottom: 4px; color: #cfe3ea; text-shadow: 0 1px 0 #000; }
+.fhud[data-ph="warn"] .fphase { color: #ffd23f; } .fhud[data-ph="dash"] .fphase { color: #ff6a58; } .fhud[data-ph="tired"] .fphase { color: #7dffa8; }
+.fhud[data-ph="tired"] .pfill { background: #7dffa8; }
+.sbar { height: 6px; margin-top: 3px; background: rgba(8, 16, 24, .82); border: 2px solid #f1f6f4; }
+.sfill { height: 100%; width: 100%; background: #58c8ff; transition: width .1s linear; }
+.arow { display: grid; grid-template-columns: 1fr 140px; gap: 10px; align-items: center; margin: 10px 0; font-size: 14px; }
+.arow input { width: 100%; }
 .toast { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); max-width: 86%; text-align: center; font-family: var(--font-display); font-size: 24px; line-height: 1.1; padding: 6px 12px; background: rgba(8, 16, 24, .86); color: #f1f6f4; border: 2px solid #f1f6f4; pointer-events: none; }
 .toast.good { border-color: #6be39a; color: #c9ffe0; } .toast.bad { border-color: #ff8a7a; color: #ffd6d0; }
 .hintline { margin: 10px 2px 0; min-height: 22px; color: var(--muted); font-size: 14px; }
@@ -170,6 +177,7 @@ kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border:
     <div class="chips">
       <span class="chip" id="cMoney">0 xu</span>
       <span class="chip" id="cLevel">Cấp 1</span>
+      <button class="btn" type="button" data-act="audio">Âm thanh</button>
       <button class="btn" id="helpBtn" type="button">Cách chơi</button>
     </div>
   </header>
@@ -189,8 +197,10 @@ kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border:
         <div class="meter" id="meter" hidden><div class="meter-lbl">Lực quăng</div><div class="meter-fill" id="meterFill"></div><div class="meter-max" id="meterMax"></div></div>
         <div class="fhud" id="fhud" hidden>
           <div class="fname" id="fName">???</div>
+          <div class="fphase" id="fPhase"></div>
           <div class="tbar"><div class="z slack"></div><div class="z sweet"></div><div class="z danger"></div><div class="tmark" id="tMark"></div></div>
           <div class="pbar"><div class="pfill" id="pFill"></div></div>
+          <div class="sbar" title="Sức của cá"><div class="sfill" id="sFill"></div></div>
         </div>
         <div class="toast" id="toast" hidden></div>
       </div>
@@ -229,7 +239,8 @@ const CFG = {
   snapTime: 0.42,
   slackAt: 0.15,          // chùng dưới mức này => bắt đầu thoát
   slackTime: 1.6,
-  sweetLo: 0.32, sweetHi: 0.72
+  sweetLo: 0.32, sweetHi: 0.72,
+  lakeRare: { ao: 0.6, song: 0.8, ho: 1, bien: 1.15, hang: 1.3 }   // hồ xịn thì cá hiếm dễ ra hơn, nhưng hồ nào cũng có
 };
 
 const RARITY = [
@@ -277,12 +288,12 @@ const LAKES = [
 const TIMES = ['sáng', 'trưa', 'chiều', 'tối'];
 const WEATHERS = ['nắng', 'âm u', 'mưa', 'sương'];
 const PATTERNS = {
-  steady: { name: 'Kéo đều', base: 0.20, wave: 0.05, wf: 2.0, every: [99, 99], dash: 0, dur: [1, 1], hint: 'Giữ nhịp, đừng cuộn quá tay.' },
-  dash: { name: 'Lao một phát', base: 0.14, wave: 0.04, wf: 2.0, every: [3.2, 5.5], dash: 0.45, dur: [0.7, 1.0], hint: 'Thấy dấu ! thì nhả cần.' },
-  shake: { name: 'Lắc liên hồi', base: 0.20, wave: 0.13, wf: 9.0, every: [8, 12], dash: 0.25, dur: [0.6, 0.9], hint: 'Căng dây dao động nhanh.' },
-  dive: { name: 'Chúi xuống đáy', base: 0.26, wave: 0.05, wf: 1.6, every: [4, 6], dash: 0.30, dur: [1.3, 1.8], hint: 'Cú chúi kéo dài, nhả lâu.' },
-  erratic: { name: 'Khó đoán', base: 0.18, wave: 0.08, wf: 4.0, every: [2.0, 4.5], dash: 0.38, dur: [0.45, 0.8], hint: 'Lao bất chợt, nhịp thất thường.' },
-  legend: { name: 'Huyền thoại', base: 0.24, wave: 0.07, wf: 3.0, every: [2.4, 4.0], dash: 0.5, dur: [0.7, 1.1], hint: 'Mọi kiểu giật trộn lại.' }
+  steady: { name: 'Kéo đều', base: 0.20, wave: 0.05, wf: 2.0, every: [5, 8], dash: 0.22, feint: 0, chain: 0, dur: [0.55, 0.8], hint: 'Giữ nhịp, đừng cuộn quá tay.' },
+  dash: { name: 'Lao một phát', base: 0.14, wave: 0.04, wf: 2.0, every: [3.2, 5.5], dash: 0.45, feint: 0.12, chain: 0.1, dur: [0.7, 1.0], hint: 'Thấy dấu ! đỏ thì nhả dây.' },
+  shake: { name: 'Lắc liên hồi', base: 0.20, wave: 0.13, wf: 9.0, every: [5, 8], dash: 0.25, feint: 0.1, chain: 0.2, dur: [0.6, 0.9], hint: 'Căng dây dao động nhanh.' },
+  dive: { name: 'Chúi xuống đáy', base: 0.26, wave: 0.05, wf: 1.6, every: [4, 6], dash: 0.30, feint: 0.15, chain: 0, dur: [1.3, 1.8], hint: 'Cú chúi kéo dài, nhả lâu.' },
+  erratic: { name: 'Khó đoán', base: 0.18, wave: 0.08, wf: 4.0, every: [2.0, 4.5], dash: 0.38, feint: 0.4, chain: 0.35, dur: [0.45, 0.8], hint: 'Lao bất chợt, nhịp thất thường.' },
+  legend: { name: 'Huyền thoại', base: 0.24, wave: 0.07, wf: 3.0, every: [2.4, 4.0], dash: 0.5, feint: 0.35, chain: 0.4, dur: [0.7, 1.1], hint: 'Mọi kiểu giật trộn lại.' }
 };
 
 const ACTIVE_SKILLS = [
@@ -322,6 +333,7 @@ const FISH_DEFAULT = [
   F('ro-phi', 'Cá rô phi', 'ao', 1, .2, .8, 18, .8, 'steady', 'm', ['grain', 'shrimp'], null, '#8e9088', 56, 'Ăn tạp, lớn nhanh, đàn nào cũng đông.'),
   F('thoi-loi', 'Cá thòi lòi', 'ao', 1, .02, .1, 22, .5, 'erratic', 's', ['insect', 'worm'], { w: ['mưa', 'âm u'] }, '#6e7b52', 36, 'Mắt lồi, nhảy trên bùn. Hay lộ diện lúc trời ẩm.'),
   F('loc', 'Cá lóc', 'ao', 2, .5, 2.5, 60, 1.1, 'dash', 'm', ['fish', 'insect'], { t: ['sáng', 'chiều'] }, '#3c4a2e', 74, 'Thợ săn của ao. Lao một phát rồi thôi, đúng lúc đó phải nhả dây.'),
+  F('luon-vang', 'Lươn vàng', 'ao', 3, .3, 1.6, 420, 1.9, 'dive', 'd', ['worm', 'fish'], { t: ['tối'], w: ['mưa', 'âm u'] }, '#d9a521', 84, 'Thân vàng ánh, nghe kể chỉ hiện trong ao sau cơn mưa. Chui rúc, quấn dây rất giỏi.'),
   F('chep', 'Cá chép', 'ao', 2, .5, 3, 50, 1.0, 'dash', 'm', ['grain', 'worm'], null, '#b8873a', 72, 'Cá đưa ông Táo về trời. Vảy to, vây cam, khôn nhất ao.'),
 
   F('linh', 'Cá linh', 'song', 0, .02, .1, 12, .6, 'steady', 's', ['grain', 'worm'], { w: ['mưa'] }, '#aab4b6', 40, 'Mùa nước nổi, từng đàn bạc lấp lánh.'),
@@ -1041,6 +1053,230 @@ async function rebuildFish() {
 }
 function fishById(id) { return FISHMAP[id]; }
 
+/* ---------- âm thanh: tạo bằng WebAudio, không dùng file ngoài ---------- */
+const AUD = (() => {
+  const KEY = 'caucapixel_audio_v1';
+  const cfg = { music: 0.55, sfx: 0.8, amb: 0.7 };
+  try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* bỏ qua */ }
+  let ac = null, master, musicG, sfxG, ambG, noiseBuf, delayIn, started = false;
+  const L = { wind: null, rain: null, wave: null, cricket: null, creak: null };
+  let scene = { weather: 'nắng', night: false, lake: 'ao' }, sceneT = 0;
+  let nextBeat = 0, beat = 0, bar = 0, fighting = false, nextFrog = 4, nextBird = 6, nextThunder = 25, nextDrip = 2, reelAcc = 0;
+  const NOTE = n => 440 * Math.pow(2, (n - 69) / 12);
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* bỏ qua */ } }
+  function unlock() {
+    if (!ac) {
+      try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
+      build();
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return true;
+  }
+  function mkNoise() {
+    const n = ac.sampleRate * 2, b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.05; d[i] = (b0 + b1 + b2 + w * 0.18) * 0.22; }
+    return b;
+  }
+  function noiseSrc() { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.start(0, Math.random() * 1.5); return s; }
+  function build() {
+    master = ac.createGain(); master.gain.value = 0.9;
+    const comp = ac.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(ac.destination);
+    musicG = ac.createGain(); sfxG = ac.createGain(); ambG = ac.createGain();
+    musicG.connect(master); sfxG.connect(master); ambG.connect(master);
+    applyVol(true);
+    noiseBuf = mkNoise();
+    // vọng cho nhạc: delay có hồi tiếp, lọc bớt âm cao
+    delayIn = ac.createGain(); const dl = ac.createDelay(1.5), fb = ac.createGain(), lp = ac.createBiquadFilter();
+    dl.delayTime.value = 0.42; fb.gain.value = 0.42; lp.type = 'lowpass'; lp.frequency.value = 1800;
+    delayIn.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl); lp.connect(musicG);
+    // gió
+    { const s = noiseSrc(), f = ac.createBiquadFilter(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+      f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 0.5; g.gain.value = 0;
+      lfo.frequency.value = 0.13; lg.gain.value = 0.35; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+      s.connect(f); f.connect(g); g.connect(ambG); L.wind = g; }
+    // mưa
+    { const s = noiseSrc(), hp = ac.createBiquadFilter(), lp = ac.createBiquadFilter(), g = ac.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 1400; lp.type = 'lowpass'; lp.frequency.value = 8500; g.gain.value = 0;
+      s.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ambG); L.rain = g; }
+    // sóng biển
+    { const s = noiseSrc(), lp = ac.createBiquadFilter(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(), out = ac.createGain();
+      lp.type = 'lowpass'; lp.frequency.value = 650; g.gain.value = 0.5; lfo.frequency.value = 0.11; lg.gain.value = 0.4; out.gain.value = 0;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start();
+      s.connect(lp); lp.connect(g); g.connect(out); out.connect(ambG); L.wave = out; }
+    // dế: hai giọng, nhịp rít nhanh, bật tắt theo cụm
+    { const out = ac.createGain(); out.gain.value = 0; out.connect(ambG);
+      [[4350, 23], [5050, 19]].forEach((p, i) => {
+        const o = ac.createOscillator(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(), grp = ac.createOscillator(), gg = ac.createGain(), gate = ac.createGain();
+        o.frequency.value = p[0]; g.gain.value = 0.5; lfo.type = 'square'; lfo.frequency.value = p[1]; lg.gain.value = 0.5;
+        lfo.connect(lg); lg.connect(g.gain);
+        grp.frequency.value = 0.31 + i * 0.17; gg.gain.value = 0.5; gate.gain.value = 0.5; grp.connect(gg); gg.connect(gate.gain);
+        o.connect(g); g.connect(gate); gate.connect(out); o.start(); lfo.start(); grp.start();
+      });
+      L.cricket = out; }
+    // dây kêu căng
+    { const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 380; f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 4; g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(sfxG); o.start(); L.creak = g; L.creakO = o; }
+    started = true;
+  }
+  function applyVol(now) {
+    if (!ac) return;
+    const t = ac.currentTime, k = now ? 0 : 0.2;
+    musicG.gain.setTargetAtTime(cfg.music * (fighting ? 0.45 : 1) * 0.55, t, k + 0.02);
+    sfxG.gain.setTargetAtTime(cfg.sfx, t, 0.02);
+    ambG.gain.setTargetAtTime(cfg.amb, t, 0.1);
+  }
+  function setCfg(k, v) { cfg[k] = clamp(v, 0, 1); save(); applyVol(false); }
+
+  /* ---- khối dựng tiếng ---- */
+  function env(g, t, a, d, peak) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+  function tone(type, f0, f1, t, dur, vol, dest, a) {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t);
+    if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    env(g, t, a || 0.005, dur, vol); o.connect(g); g.connect(dest || sfxG); o.start(t); o.stop(t + dur + (a || 0.005) + 0.05); return g;
+  }
+  function burst(t, dur, vol, ftype, f0, f1, q, dest) {
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; const f = ac.createBiquadFilter(), g = ac.createGain();
+    f.type = ftype; f.Q.value = q || 0.8; f.frequency.setValueAtTime(f0, t); if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, Math.min(0.02, dur * 0.3), dur, vol); s.connect(f); f.connect(g); g.connect(dest || sfxG); s.start(t, Math.random() * 1.5, dur + 0.1); return g;
+  }
+
+  /* ---- hiệu ứng ---- */
+  const SFX = {
+    click() { const t = ac.currentTime; tone('square', 1200, 900, t, 0.04, 0.05); },
+    cast() { const t = ac.currentTime; burst(t, 0.32, 0.5, 'bandpass', 2600, 500, 1.2); tone('sine', 220, 110, t, 0.2, 0.08); },
+    plop() { const t = ac.currentTime; tone('sine', 620, 160, t, 0.16, 0.35); burst(t, 0.2, 0.25, 'lowpass', 2200, 400); burst(t + 0.05, 0.12, 0.12, 'bandpass', 1800, 900); },
+    nibble() { const t = ac.currentTime; tone('sine', 880, 760, t, 0.05, 0.08); },
+    bite() { const t = ac.currentTime; tone('triangle', 880, 880, t, 0.22, 0.4); tone('triangle', 1320, 1320, t + 0.09, 0.3, 0.35); burst(t, 0.18, 0.3, 'bandpass', 2000, 800); },
+    hook() { const t = ac.currentTime; tone('sine', 140, 55, t, 0.22, 0.6); tone('triangle', 1500, 700, t, 0.18, 0.2); burst(t, 0.25, 0.4, 'lowpass', 3000, 500); },
+    warn() { const t = ac.currentTime; tone('square', 760, 760, t, 0.06, 0.1); tone('square', 980, 980, t + 0.09, 0.07, 0.1); },
+    dash() { const t = ac.currentTime; burst(t, 0.45, 0.45, 'bandpass', 600, 2400, 1.5); },
+    tired() { const t = ac.currentTime; tone('sine', 520, 340, t, 0.35, 0.18); tone('sine', 660, 440, t + 0.12, 0.35, 0.14); },
+    snap() { const t = ac.currentTime; burst(t, 0.1, 0.8, 'highpass', 4500, null, 0.6); tone('sawtooth', 1200, 120, t, 0.3, 0.25); },
+    escape() { const t = ac.currentTime; tone('sine', 700, 180, t, 0.45, 0.3); burst(t + 0.05, 0.4, 0.35, 'lowpass', 2600, 500); },
+    reelin() { const t = ac.currentTime; for (let i = 0; i < 9; i++) burst(t + i * 0.055, 0.025, 0.28, 'highpass', 3500, null, 1); },
+    tick(p) { const t = ac.currentTime; burst(t, 0.022, 0.22, 'bandpass', 2600 + 700 * p, null, 3); tone('square', 180 + 120 * p, 150, t, 0.02, 0.05); },
+    land() { const t = ac.currentTime; burst(t, 0.3, 0.5, 'lowpass', 3500, 500); tone('sine', 300, 120, t, 0.18, 0.3); },
+    coin() { const t = ac.currentTime; tone('square', 1568, 1568, t, 0.08, 0.1); tone('square', 2093, 2093, t + 0.07, 0.18, 0.1); },
+    level() { const t = ac.currentTime; [523, 659, 784, 1047, 1319].forEach((f, i) => tone('triangle', f, f, t + i * 0.09, 0.3, 0.25)); },
+    catchOk(rar) {
+      const t = ac.currentTime, n = [523, 659, 784, 1047, 1319, 1568];
+      const cnt = 3 + Math.min(3, rar || 0);
+      for (let i = 0; i < cnt; i++) tone('triangle', n[i], n[i], t + i * 0.1, 0.35, 0.28);
+      if ((rar || 0) >= 3) for (let i = 0; i < 6; i++) tone('sine', 1800 + i * 330, 1800 + i * 330, t + 0.45 + i * 0.07, 0.5, 0.1);
+    },
+    thunder() {
+      const t = ac.currentTime;
+      burst(t, 0.15, 0.7, 'highpass', 2500, null, 0.5, ambG);
+      burst(t + 0.05, 3.4, 0.9, 'lowpass', 220, 60, 0.7, ambG);
+      burst(t + 0.9, 2.4, 0.55, 'lowpass', 160, 50, 0.7, ambG);
+    }
+  };
+  function sfx(name, a) { if (!ac || !started || cfg.sfx <= 0.001) return; try { SFX[name](a); } catch (e) { /* bỏ qua */ } }
+
+  /* ---- nhạc nền: hợp âm êm, vài nốt gảy ngẫu nhiên, nhịp shaker nhẹ ---- */
+  const KEYS = {
+    ao: { root: 57, ch: [[0, 3, 7, 10, 14], [-4, 0, 3, 7, 10], [3, 7, 10, 14, 17], [-2, 2, 5, 9, 12]], sc: [0, 3, 5, 7, 10, 12, 15], bpm: 70 },
+    song: { root: 55, ch: [[0, 4, 7, 11, 14], [5, 9, 12, 16, 19], [-3, 0, 4, 7, 11], [2, 5, 9, 12, 16]], sc: [0, 2, 4, 7, 9, 12, 14], bpm: 74 },
+    ho: { root: 60, ch: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 10], [5, 9, 12, 16, 19], [7, 11, 14, 17, 21]], sc: [0, 2, 4, 7, 9, 12, 16], bpm: 78 },
+    bien: { root: 62, ch: [[0, 4, 7, 9, 14], [5, 9, 12, 14, 16], [7, 11, 14, 16, 19], [0, 4, 7, 9, 14]], sc: [0, 2, 4, 7, 9, 14, 16], bpm: 84 },
+    hang: { root: 52, ch: [[0, 3, 7, 10, 15], [-2, 1, 5, 8, 12], [-5, -2, 2, 5, 9], [-7, -4, 0, 3, 7]], sc: [0, 3, 7, 10, 12, 15], bpm: 58 }
+  };
+  function pad(t, notes, len, vol) {
+    notes.forEach((n, i) => {
+      [-6, 6].forEach(det => {
+        const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+        o.type = 'triangle'; o.frequency.value = NOTE(n); o.detune.value = det + (i - 2) * 1.5;
+        f.type = 'lowpass'; f.frequency.value = 1100;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + len * 0.35); g.gain.linearRampToValueAtTime(0.0001, t + len * 1.02);
+        o.connect(f); f.connect(g); g.connect(musicG); o.start(t); o.stop(t + len * 1.05 + 0.1);
+      });
+    });
+  }
+  function pluck(t, n, vol) {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = NOTE(n);
+    env(g, t, 0.006, 0.9, vol); o.connect(g); g.connect(musicG);
+    const s = ac.createGain(); s.gain.value = 0.55; g.connect(s); s.connect(delayIn);
+    o.start(t); o.stop(t + 1.1);
+  }
+  function musicTick() {
+    if (cfg.music <= 0.001) { nextBeat = Math.max(nextBeat, ac.currentTime); return; }
+    const K = KEYS[scene.lake] || KEYS.ao, spb = 60 / K.bpm / 2; // bước 1/8
+    if (nextBeat < ac.currentTime - 0.5) nextBeat = ac.currentTime + 0.05;
+    while (nextBeat < ac.currentTime + 0.35) {
+      const t = nextBeat, step = beat % 16;
+      if (step === 0) { const ch = K.ch[bar % K.ch.length]; pad(t, ch.map(x => K.root - 12 + x), spb * 16, 0.05); bar++; }
+      if (step % 2 === 0 && Math.random() < (step % 4 === 0 ? 0.5 : 0.28)) { const ch = K.sc[Math.floor(Math.random() * K.sc.length)]; pluck(t, K.root + 12 + ch, 0.09); }
+      if (scene.lake !== 'hang' && step % 2 === 1) burst(t, 0.04, 0.035, 'highpass', 6500, null, 0.5, musicG);
+      if (step % 8 === 0 && scene.lake !== 'hang') { tone('sine', 90, 45, t, 0.28, 0.2, musicG); }
+      beat++; nextBeat += spb;
+    }
+  }
+
+  /* ---- âm thanh môi trường ---- */
+  function croak(t) {
+    const n = 2 + Math.floor(Math.random() * 3), base = 130 + Math.random() * 60;
+    for (let i = 0; i < n; i++) {
+      const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(), tt = t + i * 0.11;
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(base * 1.4, tt); o.frequency.exponentialRampToValueAtTime(base * 0.8, tt + 0.08);
+      f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 2.2; env(g, tt, 0.01, 0.07, 0.11);
+      o.connect(f); f.connect(g); g.connect(ambG); o.start(tt); o.stop(tt + 0.14);
+    }
+  }
+  function bird(t) {
+    const f0 = 2400 + Math.random() * 1400, n = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) tone('sine', f0, f0 * (1.2 + Math.random() * 0.3), t + i * 0.1, 0.07, 0.05, ambG);
+  }
+  function drip(t) { const f = 1100 + Math.random() * 900; tone('sine', f, f * 0.7, t, 0.12, 0.08, ambG); tone('sine', f, f * 0.7, t + 0.22, 0.12, 0.04, ambG); tone('sine', f, f * 0.7, t + 0.5, 0.12, 0.02, ambG); }
+
+  function setScene(o) { scene = o; }
+  function sceneApply() {
+    const t = ac.currentTime, w = scene.weather, cave = scene.lake === 'hang', sea = scene.lake === 'bien', open = !cave;
+    const wind = cave ? 0.05 : { 'nắng': 0.05, 'âm u': 0.15, 'mưa': 0.2, 'sương': 0.1 }[w] + (sea ? 0.12 : 0);
+    L.wind.gain.setTargetAtTime(wind, t, 1.2);
+    L.rain.gain.setTargetAtTime(open && w === 'mưa' ? 0.5 : 0, t, 1.5);
+    L.wave.gain.setTargetAtTime(sea ? 1 : 0, t, 1);
+    L.cricket.gain.setTargetAtTime(scene.night && open && !sea && w !== 'mưa' ? 0.028 : 0, t, 1.5);
+  }
+  function ambTick(dt) {
+    sceneT -= dt; if (sceneT <= 0) { sceneT = 0.6; sceneApply(); }
+    const t = ac.currentTime, w = scene.weather, cave = scene.lake === 'hang', sea = scene.lake === 'bien';
+    if (!cave && !sea) {
+      nextFrog -= dt; if (nextFrog <= 0) { nextFrog = 1.5 + Math.random() * 4; if ((scene.night || w === 'mưa') && cfg.amb > 0) croak(t + Math.random() * 0.2); }
+      nextBird -= dt; if (nextBird <= 0) { nextBird = 3 + Math.random() * 7; if (!scene.night && w !== 'mưa') bird(t); }
+    }
+    if (cave) { nextDrip -= dt; if (nextDrip <= 0) { nextDrip = 1.2 + Math.random() * 3.5; drip(t); } }
+    if (w === 'mưa' && !cave) {
+      nextThunder -= dt;
+      if (nextThunder <= 0) { nextThunder = 18 + Math.random() * 40; const d = 0.05 + Math.random() * 0.4; if (typeof G !== 'undefined') G.flash = 1; setTimeout(() => { try { sfx('thunder'); } catch (e) { /* bỏ qua */ } }, d * 1000 + 600); }
+    }
+  }
+
+  /* ---- gọi từ vòng game ---- */
+  function update(dt) {
+    if (!ac || !started || ac.state !== 'running') return;
+    musicTick(); ambTick(dt);
+  }
+  function fightFeel(on, T, holding, prog) {
+    if (!ac || !started) return;
+    if (fighting !== on) { fighting = on; applyVol(false); }
+    const t = ac.currentTime;
+    const c = on ? Math.max(0, T - 0.72) * 0.55 : 0;
+    L.creak.gain.setTargetAtTime(c * cfg.sfx, t, 0.05);
+    if (on) L.creakO.frequency.setTargetAtTime(280 + 700 * clamp(T, 0, 1.2), t, 0.05);
+    reelAcc = on && holding ? reelAcc : 0;
+  }
+  function reelTick(dt, T, speed) {
+    if (!ac || !started) return;
+    reelAcc += dt * (6 + 22 * clamp(speed, 0, 1.5));
+    if (reelAcc >= 1) { reelAcc -= 1; sfx('tick', clamp(T, 0, 1)); }
+  }
+  return { cfg, unlock, setCfg, sfx, update, setScene, fightFeel, reelTick, isOn: () => !!ac && ac.state === 'running' };
+})();
+
 /* ===== GAME CÂU CÁ: trạng thái, cơ chế, vẽ ===== */
 const SAVE_KEY = 'caucapixel_save_v1';
 function newSave() {
@@ -1088,16 +1324,18 @@ function fishPool(lakeId) { return FISH.filter(f => f.lake === lakeId); }
 function pickFish(dist) {
   const pool = fishPool(S.lake); if (!pool.length) return null;
   const R = rod(), B = bait(), ph = phaseNow(), wx = G.weather, cave = S.lake === 'hang';
+  const gearQ = Math.max(0, (B.attr - 1) * 0.55 + R.luck * 3 + 0.08 * S.pass.eye + (G.scentOn ? 0.35 : 0));
   const items = pool.map(f => {
     let w = RARITY[f.rar].w;
     const zc = { s: 0.2, m: 0.55, d: 0.9 }[f.zone] || 0.5;
     w *= 0.12 + Math.exp(-Math.pow((dist - zc) / 0.3, 2));
-    w *= (f.likes || []).includes(B.kind) ? 2.4 : 0.65;
+    const liked = (f.likes || []).includes(B.kind);
+    w *= f.rar >= 2 ? (liked ? 3.2 : 0.35) : (liked ? 2.4 : 0.65);
     if (!cave && f.when) {
       if (f.when.t && f.when.t.length) w *= f.when.t.includes(ph) ? 2.2 : 0.45;
       if (f.when.w && f.when.w.length) w *= f.when.w.includes(wx) ? 2.2 : 0.6;
     }
-    if (f.rar >= 2) w *= (1 + R.luck + 0.08 * S.pass.eye) * (G.scentOn ? 2 : 1);
+    if (f.rar >= 1) w *= Math.pow(0.4 + gearQ, f.rar * 0.65) * (f.rar >= 2 ? (CFG.lakeRare[S.lake] || 1) : 1);
     if (f.rar === 4) {
       const okBait = B.kind === 'lure' || B.kind === 'glow', okRod = S.rod === 'pro' || S.rod === 'legend';
       w = (okBait && okRod && dist >= 0.7) ? w * 8 : 0;
@@ -1176,6 +1414,8 @@ function changeWeather() {
   G.wT = rnd(60, 120);
 }
 function updateWorld(dt) {
+  G.flash = Math.max(0, G.flash - dt * 2.5);
+  AUD.setScene({ weather: G.weather, night: hourNow() < 5 || hourNow() >= 19, lake: S.lake }); AUD.update(dt);
   G.clouds.forEach(c => { c.x += c.s * dt; if (c.x > VW + 10) { c.x = -c.w - 10; c.y = 8 + Math.random() * 46 | 0; } });
   G.amb.forEach(a => {
     a.x += a.dir * a.spd * dt; a.ph += dt * (2 + a.spd * 0.25);
@@ -1216,10 +1456,10 @@ function lockPower() {
   G.scentOn = G.scentArm; G.scentArm = false;
   G.bx = distToX(G.dist); G.by = SURF; G.dip = 0;
   G.hookY = clamp(SURF + 18 + G.dist * 90, SURF + 18, floorY(G.bx) - 12);
-  G.st = 'casting'; G.t = 0; saveSoon();
+  G.st = 'casting'; G.t = 0; saveSoon(); AUD.sfx('cast');
 }
 function landBobber() {
-  emit('drop', G.bx, SURF, 8); emit('ring', G.bx, SURF, 1);
+  emit('drop', G.bx, SURF, 8); emit('ring', G.bx, SURF, 1); AUD.sfx('plop');
   const f = pickFish(G.dist);
   G.bf = f ? { f, w: rollWeight(f, G.dist), state: 'hidden', x: 0, y: 0, ph: 0, x0: 0, y0: 0 } : null;
   const speed = bait().attr * (G.scentOn ? 2 : 1);
@@ -1227,24 +1467,29 @@ function landBobber() {
 }
 function beginReel(msg, kind) {
   if (msg) toast(msg, kind);
+  AUD.sfx('reelin');
   G.st = 'reel'; G.t = 0; G.fight = null; G.hold = false; G.rx0 = G.bx;
   if (G.bf && G.bf.state !== 'hidden') G.bf.leave = true;
 }
 function setHook() {
   const f = G.bf.f;
   G.hold = true; G.shake = 3;
-  const R = rod(), ratio = clamp(f.pow / (R.power * (1 + 0.1 * S.pass.line)), 0.45, 2.4);
+  const R = rod(), ratio = clamp(f.pow / (R.power * (1 + 0.1 * S.pass.line)), 0.45, 2.6);
   const P = PATTERNS[f.pat] || PATTERNS.steady;
   G.fight = {
-    f, w: G.bf.w, ratio, work: 3.2 + 2.2 * f.pow, T: 0.3, prog: 0.07, stam: 1, ph: 'calm', tm: 0, dur: 1, nextDash: rnd(P.every[0], P.every[1]) * 0.7 + 1.2,
+    f, w: G.bf.w, ratio, work: 5.5 + 3.2 * Math.pow(f.pow, 0.9), endur: 0.5 + 0.3 * f.pow + 0.22 * f.rar,
+    T: 0.3, prog: 0.07, stam: 1, ph: 'calm', tm: 0, dur: 1, tiredT: 0, fake: false, winds: 0, eff: 0,
+    nextDash: rnd(P.every[0], P.every[1]) * 0.7 + 1.2,
     snap: 0, slack: 0, t: 0, pull: 0, env: 0, sweet: false, sx: G.bx, sy: G.hookY, x: G.bx, y: G.hookY, ap: 0, amp: 2, tilt: 0
   };
   G.st = 'fight'; G.t = 0;
   emit('drop', G.bx, SURF, 6); emit('bubble', G.bx, G.hookY, 5);
-  toast('Dính rồi! Giữ chuột để cuộn, nhả khi cá lao.', 'good');
+  AUD.sfx('hook');
+  toast('Dính rồi! Cá lao thì nhả dây, cá mệt thì kéo.', 'good');
 }
-function failFight(msg, kind) {
+function failFight(msg, kind, snap) {
   const F = G.fight;
+  AUD.sfx(snap ? 'snap' : 'escape');
   S.stats.lost++; saveSoon();
   const spr = SPR[F.f.id];
   G.esc = { id: F.f.id, x: F.x, y: F.y, t: 0, spr: spr && spr.canvas };
@@ -1293,16 +1538,17 @@ function updateGame(dt) {
       }
       if (G.wait <= 0) {
         if (!bf) { beginReel('Hôm nay không có cá nào cắn.', null); break; }
-        G.st = 'nibble'; G.t = 0; G.nibbleDur = rnd(0.9, 2.1); bf.state = 'nibble';
+        G.st = 'nibble'; G.t = 0; G.nibbleDur = rnd(0.9, 2.1); bf.state = 'nibble'; G.nibT = 0; AUD.sfx('nibble');
       }
       break;
     }
     case 'nibble': {
       G.t += dt; G.rodAng = -0.75; G.rodBend = 3 + Math.sin(G.t * 40) * 1.2;
+      G.nibT = (G.nibT || 0) + dt; if (G.nibT > 0.55) { G.nibT = 0; AUD.sfx('nibble'); }
       G.dip = (Math.sin(G.t * 26) > 0.5 ? 1 : 0) + (G.t % 0.55 < 0.1 ? 2 : 0);
       const bf = G.bf, s = SPR[bf.f.id], hw = s ? s.canvas.width / 2 : 20;
       bf.x = G.bx + hw - 3 + Math.sin(G.t * 30) * 1.2; bf.y = G.hookY + Math.sin(G.t * 11) * 1.5; bf.ph += dt * 10;
-      if (G.t >= G.nibbleDur) { G.st = 'bite'; G.t = 0; G.shake = 4; bf.state = 'bite'; emit('drop', G.bx, SURF, 5); emit('ring', G.bx, SURF, 1); }
+      if (G.t >= G.nibbleDur) { G.st = 'bite'; G.t = 0; G.shake = 4; bf.state = 'bite'; AUD.sfx('bite'); emit('drop', G.bx, SURF, 5); emit('ring', G.bx, SURF, 1); }
       break;
     }
     case 'bite': {
@@ -1327,43 +1573,77 @@ function updateGame(dt) {
     }
   }
   if (G.esc) { G.esc.t += dt; G.esc.x += 90 * dt; if (G.esc.t > 0.9) G.esc = null; }
-  if (G.st !== 'fight') fightHudHide(); else fightHudUpdate();
+  if (G.st !== 'fight') { fightHudHide(); AUD.fightFeel(false, 0, false, 0); } else fightHudUpdate();
   meterSync();
 }
 
 function updateFight(dt) {
   const F = G.fight, f = F.f, P = PATTERNS[f.pat] || PATTERNS.steady, R = rod();
   F.t += dt;
-  if (F.ph === 'calm') { F.nextDash -= dt; if (F.nextDash <= 0 && P.dash > 0) { F.ph = 'warn'; F.tm = 0.5; } }
-  else if (F.ph === 'warn') { F.tm -= dt; if (F.tm <= 0) { F.ph = 'dash'; F.dur = rnd(P.dur[0], P.dur[1]); F.tm = F.dur; } }
-  else { F.tm -= dt; if (F.tm <= 0) { F.ph = 'calm'; F.nextDash = rnd(P.every[0], P.every[1]); } }
-  const ratio = F.ratio * (0.6 + 0.4 * F.stam) * (G.act.calm > 0 ? 0.45 : 1);
+  const reeling = G.hold;
+  /* --- nhịp của cá: yên, báo hiệu, lao, mệt --- */
+  if (F.ph === 'tired') {
+    F.tiredT -= dt;
+    if (F.tiredT <= 0) { F.ph = 'calm'; F.winds++; F.stam = clamp(0.62 + 0.05 * f.pow - (F.prog > 0.7 ? 0.25 : 0), 0.35, 0.8); F.nextDash = rnd(1.1, 2.2); }
+  } else if (F.ph === 'calm') {
+    F.nextDash -= dt;
+    if (F.nextDash <= 0 && P.dash > 0) { F.ph = 'warn'; F.tm = clamp(0.58 - 0.04 * f.pow, 0.26, 0.55); F.fake = Math.random() < (P.feint || 0); AUD.sfx('warn'); }
+  } else if (F.ph === 'warn') {
+    F.tm -= dt;
+    if (F.tm <= 0) {
+      if (F.fake) { F.ph = 'calm'; F.nextDash = rnd(P.every[0], P.every[1]) * 0.6; F.fake = false; }
+      else { F.ph = 'dash'; F.dur = rnd(P.dur[0], P.dur[1]); F.tm = F.dur; AUD.sfx('dash'); }
+    }
+  } else {
+    F.tm -= dt;
+    if (F.tm <= 0) {
+      if (Math.random() < (P.chain || 0) && F.stam > 0.3) { F.ph = 'warn'; F.tm = 0.22; F.fake = false; AUD.sfx('warn'); }
+      else { F.ph = 'calm'; F.nextDash = rnd(P.every[0], P.every[1]); }
+    }
+  }
+  if ((F.ph === 'calm' || F.ph === 'warn') && F.stam <= 0.2) {
+    F.ph = 'tired'; F.tiredT = clamp(3.6 - 0.25 * f.pow - 0.25 * f.rar, 1.9, 3.6); F.fake = false; AUD.sfx('tired'); emit('spark', F.x, F.y, 6);
+  }
+  const tired = F.ph === 'tired';
+  /* --- lực kéo của cá --- */
+  const ratio = F.ratio * (0.6 + 0.4 * F.stam) * (G.act.calm > 0 ? 0.45 : 1) * (tired ? 0.35 : 1);
   const w1 = Math.sin(F.t * P.wf), w2 = Math.sin(F.t * P.wf * 2.3 + 1.3) * 0.5;
   const base = Math.max(0.02, P.base + P.wave * (w1 + w2) * 0.7) * ratio;
   let env = 0; if (F.ph === 'dash') { const u = 1 - F.tm / F.dur; env = Math.pow(Math.sin(Math.PI * clamp(u, 0, 1)), 0.6); }
   const pull = base + P.dash * ratio * env; F.pull = pull; F.env = env;
-  const reeling = G.hold;
-  const target = reeling ? pull + CFG.reelStrain * (G.act.power > 0 ? 1.12 : 1) : pull * CFG.releaseFactor;
+  const target = reeling ? pull + CFG.reelStrain * (G.act.power > 0 ? 1.12 : 1) * (1 + 1.2 * env) : pull * CFG.releaseFactor;
   F.T = clamp(F.T + (target - F.T) * Math.min(1, dt / 0.2), 0, 1.3);
   F.sweet = F.T >= CFG.sweetLo && F.T <= CFG.sweetHi;
-  if (reeling) F.prog += R.reel * (1 + 0.07 * S.pass.arms) * (G.act.power > 0 ? 2 : 1) * (F.sweet ? 1.3 : 1) / F.work * dt * (F.ph === 'dash' ? 0.55 : 1);
-  else F.prog -= (0.025 + (F.ph === 'dash' ? 0.07 * ratio : 0)) * dt;
+  /* --- sức cá: nhả dây lúc cá lao và mài lúc cá yên thì cá mệt --- */
+  if (!tired) {
+    let d;
+    if (F.ph === 'dash') d = reeling ? 0.04 : 0.30 * (0.4 + 0.6 * env);
+    else d = reeling ? (F.T >= CFG.sweetLo ? 0.09 : 0.03) : -0.025;
+    F.stam = clamp(F.stam - (d > 0 ? d / F.endur : d) * dt, 0, 1);
+  }
+  /* --- tiến độ kéo cá --- */
+  let eff = tired ? 1.9 : (F.ph === 'dash' ? 0.08 : 0.18 + 0.8 * Math.pow(1 - F.stam, 1.3));
+  F.eff = eff;
+  if (reeling) F.prog += R.reel * (1 + 0.07 * S.pass.arms) * (G.act.power > 0 ? 2 : 1) * (F.sweet ? 1.2 : 1) * eff / F.work * dt;
+  else if (F.ph === 'dash') F.prog -= (0.07 + 0.09 * ratio) * env * dt;
+  else if (!tired) F.prog -= 0.02 * dt;
   F.prog = clamp(F.prog, 0, 1.02);
-  F.stam = Math.max(0.12, F.stam - dt * ((reeling && F.T > CFG.sweetLo) ? 0.05 : 0.012));
   if (F.T > CFG.snapAt) F.snap += dt; else F.snap = Math.max(0, F.snap - dt * 1.5);
-  if (F.T < CFG.slackAt) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2);
+  if (F.T < CFG.slackAt && !tired) F.slack += dt; else F.slack = Math.max(0, F.slack - dt * 2);
   G.rodAng = -0.95 + 0.2 * F.T; G.rodBend = 4 + 16 * clamp(F.T, 0, 1.1);
-  if (F.snap > CFG.snapTime) { failFight('Dây đứt rồi!', 'bad'); return; }
-  if (F.slack > CFG.slackTime) { failFight('Dây chùng, cá thoát mất.', 'bad'); return; }
+  AUD.fightFeel(true, F.T, reeling, F.prog);
+  if (reeling) AUD.reelTick(dt, F.T, tired ? 1.2 : eff);
+  if (F.snap > CFG.snapTime) { failFight('Dây đứt rồi! Cá lao mà còn cuộn là đứt.', 'bad', true); return; }
+  if (F.slack > CFG.slackTime) { failFight('Dây chùng, cá nhả lưỡi thoát mất. Cá chưa mệt thì đừng thả lâu.', 'bad'); return; }
   if (F.prog >= 1) { landFish(); return; }
   const e = 1 - Math.pow(1 - F.prog, 2);
   const spr = SPR[f.id], hw = spr ? spr.canvas.width / 2 : 20;
-  F.x = clamp(lerp(F.sx, distToX(0.04) + hw, e) + F.env * 12 + Math.sin(F.t * 1.7) * 3, DOCKW + hw + 6, VW - hw - 4);
-  F.y = clamp(lerp(F.sy, SURF + 24, e * 0.85) + Math.sin(F.t * 2.3) * 4 + (f.pat === 'dive' ? F.env * 18 : 0), SURF + 14, floorY(F.x) - 12);
-  F.ap += dt * (5 + 14 * F.pull + (F.ph === 'dash' ? 8 : 0));
-  F.amp = 1.2 + 5 * F.T + (F.ph === 'dash' ? 3 : 0) + (F.ph === 'warn' ? 1.5 : 0);
-  F.tilt = Math.sin(F.t * (6 + 10 * F.pull)) * (0.05 + 0.22 * clamp(F.T, 0, 1)) + (F.ph === 'dash' ? 0.1 : 0);
-  if (Math.random() < dt * (1 + 6 * F.T)) emit('bubble', F.x, F.y - 4, 1);
+  F.x = clamp(lerp(F.sx, distToX(0.04) + hw, e) + F.env * 12 + (tired ? 0 : Math.sin(F.t * 1.7) * 3), DOCKW + hw + 6, VW - hw - 4);
+  F.y = clamp(lerp(F.sy, SURF + 24, e * 0.85) + (tired ? -4 : Math.sin(F.t * 2.3) * 4) + (f.pat === 'dive' ? F.env * 18 : 0), SURF + 14, floorY(F.x) - 12);
+  F.ap += dt * (tired ? 2.2 : 5 + 14 * F.pull + (F.ph === 'dash' ? 8 : 0));
+  F.amp = tired ? 0.9 : 1.2 + 5 * F.T + (F.ph === 'dash' ? 3 : 0) + (F.ph === 'warn' ? 1.5 : 0);
+  F.tilt = tired ? 0.38 + Math.sin(F.t * 2) * 0.05 : Math.sin(F.t * (6 + 10 * F.pull)) * (0.05 + 0.22 * clamp(F.T, 0, 1)) + (F.ph === 'dash' ? 0.1 : 0);
+  if (!tired && Math.random() < dt * (1 + 6 * F.T)) emit('bubble', F.x, F.y - 4, 1);
   if (F.ph === 'dash' && Math.random() < dt * 14) emit('bubble', F.x + hw, F.y, 1);
 }
 
@@ -1385,6 +1665,7 @@ function landFish() {
   G.land = { t: 0, dur: 0.95, f, x0: F.x, y0: F.y, res: { f, w, v, isNew, record, xp, ups, unlocked, legend: f.rar === 4 } };
   G.st = 'landing'; G.hold = false; G.fight = null; G.bf = null;
   emit('drop', F.x, SURF, 12); emit('ring', F.x, SURF, 1, { big: 16 });
+  AUD.sfx('land'); setTimeout(() => AUD.sfx('catchOk', f.rar), 250); if (ups.length) setTimeout(() => AUD.sfx('level'), 900);
   saveSoon();
 }
 
@@ -1399,7 +1680,7 @@ function useSkill(id) {
     G.scentArm = true; toast('Mồi thơm đã sẵn sàng cho lần quăng tới.', 'good');
   } else if (id === 'sonar') { G.act.sonar = sk.dur; toast('Sonar đang quét dưới nước.', 'good'); }
   else { G.act[id] = sk.dur; toast(sk.name + '!', 'good'); }
-  G.cool[id] = sk.cd; emit('spark', 60, 80, 8);
+  G.cool[id] = sk.cd; emit('spark', 60, 80, 8); AUD.sfx('coin');
 }
 
 /* ---------- vẽ ---------- */
@@ -1488,6 +1769,7 @@ function render() {
   }
   if (!cave && sky.dark > 0) { ctx.fillStyle = 'rgba(8,16,48,' + (sky.dark * 0.46) + ')'; ctx.fillRect(0, 0, VW, VH); }
   if (cave) { ctx.fillStyle = 'rgba(0,0,10,.18)'; ctx.fillRect(0, 0, VW, VH); }
+  if (G.flash > 0.02) { ctx.fillStyle = 'rgba(235,240,255,' + (G.flash * 0.55) + ')'; ctx.fillRect(0, 0, VW, VH); }
   ctx.restore();
 }
 
@@ -1530,9 +1812,9 @@ const HINTS = {
   power: 'Nhấn lần nữa để chốt lực. Vạch trắng là tầm xa tối đa của cần. Xa bờ thì cá to và hiếm hơn.',
   casting: '', waiting: 'Chờ cá cắn. Mồi hợp khẩu vị thì cá cắn nhanh. Nhấn để thu cần về.',
   nibble: 'Cá đang rỉa mồi. Đừng vội, chờ phao chìm hẳn.', bite: 'PHAO CHÌM! DỰNG CẦN NGAY!',
-  fight: 'Giữ chuột để cuộn, nhả ra khi thấy dấu chấm than. Giữ thanh căng trong vùng xanh.', landing: '', reel: ''
+  fight: 'Cá lao (dấu ! đỏ): NHẢ dây cho cá tốn sức. Cá yên: giữ để mài mệt, vạch trắng trong vùng xanh. Cá mệt: KÉO hết cỡ.', landing: '', reel: ''
 };
-const ACT_LABEL = { idle: 'QUĂNG CẦN', power: 'CHỐT LỰC', casting: '...', waiting: 'THU CẦN', nibble: 'ĐỪNG VỘI', bite: 'DỰNG CẦN!', fight: 'GIỮ ĐỂ CUỘN', landing: '...', reel: '...' };
+const ACT_LABEL = { idle: 'QUĂNG CẦN', power: 'CHỐT LỰC', casting: '...', waiting: 'THU CẦN', nibble: 'ĐỪNG VỘI', bite: 'DỰNG CẦN!', fight: 'GIỮ ĐỂ KÉO', landing: '...', reel: '...' };
 let lastBaitSig = '', skillsBuilt = false;
 function buildSkillBar() {
   $('skillBar').innerHTML = ACTIVE_SKILLS.map((k, i) =>
@@ -1572,11 +1854,16 @@ function meterSync() {
   if (show) { $('meterFill').style.width = (G.power * rod().range * 100) + '%'; $('meterMax').style.left = (rod().range * 100) + '%'; }
 }
 function fightHudHide() { const h = $('fhud'); if (!h.hidden) h.hidden = true; }
+const PHASE_TXT = { calm: ['Giữ nhịp, mài cho cá mệt', 'calm'], warn: ['Cá sắp lao!', 'warn'], dash: ['Cá lao! NHẢ DÂY!', 'dash'], tired: ['Cá mệt rồi! KÉO!', 'tired'] };
 function fightHudUpdate() {
   const h = $('fhud'), F = G.fight; if (!F) return;
   if (h.hidden) { h.hidden = false; const j = S.journal[F.f.id]; $('fName').textContent = j && j.n ? F.f.name : '???'; }
   $('tMark').style.left = clamp(F.T, 0, 1) * 100 + '%';
   $('pFill').style.width = clamp(F.prog, 0, 1) * 100 + '%';
+  $('sFill').style.width = clamp(F.stam, 0, 1) * 100 + '%';
+  const p = PHASE_TXT[F.ph] || PHASE_TXT.calm;
+  const ph = $('fPhase'); if (ph.textContent !== p[0]) ph.textContent = p[0];
+  if (h.dataset.ph !== p[1]) h.dataset.ph = p[1];
 }
 
 /* ---------- hộp thoại ---------- */
@@ -1608,7 +1895,7 @@ function showHelp() {
   openModal('<h2>Cách chơi</h2><div class="story small">' +
     '<p><b>1. Quăng.</b> Nhấn <kbd>Space</kbd> hoặc chạm khung chơi, nhấn lần nữa để chốt lực. Quăng xa thì cá to, hiếm nhưng khó kéo.</p>' +
     '<p><b>2. Chờ và dựng cần.</b> Phao rung là cá đang rỉa mồi, đợi phao chìm hẳn rồi nhấn ngay. Sớm hay muộn quá cá đều thoát.</p>' +
-    '<p><b>3. Kéo cá.</b> Giữ <kbd>Space</kbd> hoặc giữ chuột để cuộn, nhả ra để chùng dây. Giữ vạch trắng trong vùng xanh. Căng quá dây đứt, chùng quá cá thoát. Khi cá hiện dấu chấm than là sắp lao, hãy nhả.</p>' +
+    '<p><b>3. Kéo cá.</b> Giữ <kbd>Space</kbd> hoặc giữ chuột để kéo, nhả ra để thả dây. Cá yên thì giữ để mài sức, vạch trắng ở vùng xanh. Cá hiện dấu ! vàng là sắp lao, dấu ! đỏ là đang lao: hãy NHẢ để cá tốn sức, cuộn lúc đó là đứt dây. Thanh xanh dương là sức cá. Khi cá mệt (chữ xanh lá) thì kéo hết cỡ. Cá giả vờ báo hiệu, và cá khó có thể lao hai lần liền.</p>' +
     '<p><b>4. Kỹ năng</b> bấm <kbd>1</kbd> đến <kbd>4</kbd>. <b>5. Bán cá</b> ở tab Túi và sổ cá, mua cần và mồi ở Cửa hàng, mở hồ mới ở Bản đồ.</p>' +
     '<p class="muted">Tab Admin cho phép tải ảnh cá thật lên, tự tách nền và pixel hoá để thay cá trong game.</p></div>' +
     '<div class="mbtns"><button class="btn pri" type="button" data-act="closeModal">Đã hiểu</button></div>');
@@ -1661,7 +1948,7 @@ function renderBag() {
     $('v-bag').innerHTML = '<div class="stack">' + '<div class="panel">' + seg + '<p class="muted small">Loài nào chưa câu được chỉ hiện bóng đen. Câu được một lần là ghi vào sổ cùng gợi ý lần sau.</p></div>' + secs + '</div>';
   }
 }
-function sellItem(i) { const it = S.bag[i]; if (!it) return; S.money += salePrice(it); S.stats.earned += salePrice(it); S.bag.splice(i, 1); saveSoon(); }
+function sellItem(i) { const it = S.bag[i]; if (!it) return; AUD.sfx('coin'); S.money += salePrice(it); S.stats.earned += salePrice(it); S.bag.splice(i, 1); saveSoon(); }
 
 /* ---------- kỹ năng ---------- */
 function renderSkills() {
@@ -1742,15 +2029,16 @@ function onAct(el) {
   const a = el.dataset.act, id = el.dataset.id;
   switch (a) {
     case 'closeModal': closeModal(); break;
+    case 'audio': showAudio(); break;
     case 'closeCatch': closeCatch(); break;
     case 'sellLast': sellItem(S.bag.length - 1); closeCatch(); break;
-    case 'buyRod': { const r = RODS.find(x => x.id === id); if (r && S.money >= r.price) { S.money -= r.price; S.rods.push(r.id); S.rod = r.id; saveSoon(); renderShop(); toast('Đã mua ' + r.name, 'good'); } break; }
+    case 'buyRod': { const r = RODS.find(x => x.id === id); if (r && S.money >= r.price) { AUD.sfx('coin'); S.money -= r.price; S.rods.push(r.id); S.rod = r.id; saveSoon(); renderShop(); toast('Đã mua ' + r.name, 'good'); } break; }
     case 'equipRod': S.rod = id; saveSoon(); renderShop(); break;
-    case 'buyBait': { const b = BAITS.find(x => x.id === id); if (b && S.money >= b.price * 10) { S.money -= b.price * 10; S.baits[id] = (S.baits[id] || 0) + 10; if (!(S.baits[S.bait] > 0)) S.bait = id; saveSoon(); renderShop(); } break; }
+    case 'buyBait': { const b = BAITS.find(x => x.id === id); if (b && S.money >= b.price * 10) { AUD.sfx('coin'); S.money -= b.price * 10; S.baits[id] = (S.baits[id] || 0) + 10; if (!(S.baits[S.bait] > 0)) S.bait = id; saveSoon(); renderShop(); } break; }
     case 'equipBait': S.bait = id; saveSoon(); renderShop(); break;
     case 'bagTab': bagTab = id; renderBag(); break;
     case 'sell': sellItem(+id); renderBag(); break;
-    case 'sellAll': { S.bag.forEach(it => { const p = salePrice(it); S.money += p; S.stats.earned += p; }); S.bag = []; saveSoon(); renderBag(); break; }
+    case 'sellAll': { if (S.bag.length) AUD.sfx('coin'); S.bag.forEach(it => { const p = salePrice(it); S.money += p; S.stats.earned += p; }); S.bag = []; saveSoon(); renderBag(); break; }
     case 'skillPlus': { const p = PASSIVES.find(x => x.id === id); if (p && S.sp > 0 && S.pass[id] < p.max) { S.sp--; S.pass[id]++; saveSoon(); renderSkills(); } break; }
     case 'travel': travel(id); break;
     case 'unlock': { const L = LAKES.find(x => x.id === id); if (L && unlockReqs(L).every(x => x.ok)) { S.money -= L.cost; S.unlocked.push(id); saveSoon(); travel(id); } break; }
@@ -1769,7 +2057,17 @@ function onAct(el) {
       break;
   }
 }
+function showAudio() {
+  const row = (k, name) => '<label class="arow"><span>' + name + '</span><input type="range" min="0" max="100" value="' + Math.round(AUD.cfg[k] * 100) + '" data-aud="' + k + '"></label>';
+  openModal('<h2>Âm thanh</h2><p class="muted small">Nhạc và tiếng động đều được tạo ngay trong trình duyệt. Kéo về 0 để tắt.</p>' +
+    row('music', 'Nhạc nền') + row('sfx', 'Tiếng cần câu, cá') + row('amb', 'Môi trường (mưa, gió, dế, ếch)') +
+    '<div class="mbtns"><button class="btn pri" type="button" data-act="closeModal">Xong</button></div>',
+    box => box.querySelectorAll('[data-aud]').forEach(r => r.addEventListener('input', () => { AUD.unlock(); AUD.setCfg(r.dataset.aud, +r.value / 100); })));
+}
 function bindInput() {
+  const unlock = () => { AUD.unlock(); };
+  window.addEventListener('pointerdown', unlock, { capture: true }); window.addEventListener('keydown', unlock, { capture: true });
+  document.addEventListener('click', e => { if (e.target.closest('button') && !e.target.closest('#act')) AUD.sfx('click'); });
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-act]'); if (t) { onAct(t); return; }
     const tab = e.target.closest('.tab'); if (tab) { showView(tab.dataset.view); return; }
@@ -2125,7 +2423,7 @@ async function boot() {
   if (!S.intro) { S.intro = true; S.story.includes('ao') || S.story.push('ao'); saveSoon(); openModal('<h2>Ông để lại gì?</h2><p class="story">' + esc(STORY.intro) + '</p><p class="story muted small">' + esc(STORY.ao) + '</p><div class="mbtns"><button class="btn" type="button" data-act="help">Cách chơi</button><button class="btn pri" type="button" data-act="closeModal">Ra ao thôi</button></div>'); }
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-act="help"]'); if (t) { closeModal(); showHelp(); } });
-window.__fishgame = { G, get S() { return S; }, FISH: () => FISH, SPR, pickFish, setHook, landFish, startFight: setHook, useSkill, travel, showView, saveNow };
+window.__fishgame = { AUD, G, get S() { return S; }, FISH: () => FISH, SPR, pickFish, setHook, landFish, startFight: setHook, useSkill, travel, showView, saveNow };
 boot().catch(err => { console.error(err); const m = document.createElement('p'); m.className = 'panel'; m.textContent = 'Không khởi động được: ' + err.message; document.body.appendChild(m); });
 
 })();
