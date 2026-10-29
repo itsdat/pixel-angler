@@ -136,8 +136,8 @@ body.ingame main, body.ingame #v-play { height: 100%; }
 .item .grow { flex: 1; min-width: 0; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(5, 12, 18, .72); padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
-.mbox { width: min(100%, 440px); max-height: 100%; overflow-y: auto; background: var(--panel); border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--shadow); padding: 18px; display: grid; gap: 10px; }
-.mbox h2 { font-size: 32px; line-height: 1; }
+.mbox { width: min(100%, 380px); font-size: 13px; max-height: 100%; overflow-y: auto; background: var(--panel); border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--shadow); padding: 14px; display: grid; gap: 8px; }
+.mbox h2 { font-size: 26px; line-height: 1; }
 .mbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; }
 .cwrap { display: flex; justify-content: center; padding: 14px; background: #2c6e78; border: 2px solid var(--ink); }
 .cwrap canvas { image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; height: auto; }
@@ -186,6 +186,11 @@ kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border:
 @media (max-height: 430px) { .joy { width: 104px; height: 104px; } .pad-r { transform-origin: right bottom; transform: scale(.86); } .hintline { font-size: 11px; } }
 @media (orientation: portrait) { .hintline { bottom: calc(max(16px, env(safe-area-inset-bottom, 0px)) + 250px); width: min(64%, 300px); left: 36%; } }
 @media (max-width: 520px) { .hud-tr .ibtn { font-size: 15px; padding: 5px 8px; } .chipi, .hud-tl span { font-size: 15px; } }
+#rot { position: fixed; inset: 0; z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #1d1f3d; color: #fff; text-align: center; padding: 24px; font-family: var(--font-display); font-size: 20px; }
+#rot .ph { width: 64px; height: 108px; border: 4px solid #ffd23f; border-radius: 10px; animation: rotph 2.4s ease-in-out infinite; }
+#rot button { font-family: inherit; font-size: 15px; color: #fff; background: none; border: 2px solid #ffffff55; padding: 6px 12px; }
+@keyframes rotph { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) and (max-width: 768px) { body:not(.norot) #rot { display: flex; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 </head>
@@ -243,6 +248,7 @@ kbd { font-family: var(--font-display); font-size: 17px; padding: 0 6px; border:
   </main>
 </div>
 <div class="modal" id="modal" hidden><div class="mbox" id="mbox"></div></div>
+<div id="rot"><div class="ph"></div><div>Xoay ngang màn hình để chơi dễ hơn</div><button id="rotX" type="button">Vẫn chơi dọc</button></div>
 
 <script>
 (function(){
@@ -2975,6 +2981,8 @@ async function boot() {
 document.addEventListener('click', e => { const t = e.target.closest('[data-act="help"]'); if (t) { closeModal(); showHelp(); } });
 window.__fishgame = { AUD, G, mapOf, castPoint, walkable, isWater, spawnNpc, talkNpc, initWorld, get S() { return S; }, FISH: () => FISH, SPR, pickFish, setHook, landFish, startFight: setHook, useSkill, travel, showView, saveNow };
 boot().catch(err => { console.error(err); const m = document.createElement('p'); m.className = 'panel'; m.textContent = 'Không khởi động được: ' + err.message; document.body.appendChild(m); });
+
+try { $('rotX').addEventListener('click', () => document.body.classList.add('norot')); } catch (e) {}
 
 })();
 </script>
